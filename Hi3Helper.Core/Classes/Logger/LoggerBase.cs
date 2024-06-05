@@ -1,19 +1,24 @@
-﻿using Hi3Helper.Shared.Region;
-using System;
-using System.Diagnostics;
+﻿using System;
 using System.IO;
-using System.Linq;
 using System.Text;
+#if !APPLYUPDATE
+using System.Diagnostics;
+using System.Linq;
+using Hi3Helper.Shared.Region;
+#endif
 
 namespace Hi3Helper
 {
     public class LoggerBase
     {
         #region Properties
+        public static string CurrentLauncherVersion = "vUnknown";
         private FileStream _logStream { get; set; }
         private StreamWriter _logWriter { get; set; }
         private string _logFolder { get; set; }
+#if !APPLYUPDATE
         private string _logPath { get; set; }
+#endif
         private StringBuilder _stringBuilder { get; set; }
         #endregion
 
@@ -34,17 +39,20 @@ namespace Hi3Helper
             // Set the folder path of the stored log
             _logFolder = folderPath;
 
+#if !APPLYUPDATE
             // Check if the directory exist. If not, then create.
             if (!Directory.Exists(_logFolder))
             {
                 Directory.CreateDirectory(_logFolder);
             }
+#endif
 
             // Try dispose the _logWriter even though it's not initialized.
             // This will be used if the program need to change the log folder to another location.
             _logWriter?.Dispose();
             _logStream?.Dispose();
 
+#if !APPLYUPDATE
             try
             {
                 // Initialize writer and the path of the log file.
@@ -55,11 +63,14 @@ namespace Hi3Helper
                 // If the initialization above fails, then use fallback.
                 InitializeWriter(true, logEncoding);
             }
+#endif
         }
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public virtual async void LogWriteLine() { }
+        // ReSharper disable MethodOverloadWithOptionalParameter
         public virtual async void LogWriteLine(string line = null) { }
+        // ReSharper restore MethodOverloadWithOptionalParameter
         public virtual async void LogWriteLine(string line, LogType type) { }
         public virtual async void LogWriteLine(string line, LogType type, bool writeToLog) { }
         public virtual async void LogWrite(string line, LogType type, bool writeToLog, bool fromStart) { }
@@ -70,7 +81,7 @@ namespace Hi3Helper
             _logWriter?.WriteLine(GetLine(line, type, false));
         }
 #pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
-        #endregion
+#endregion
 
         #region ProtectedMethods
         /// <summary>
@@ -124,6 +135,7 @@ namespace Hi3Helper
         #endregion
 
         #region PrivateMethods
+#if !APPLYUPDATE
         private void InitializeWriter(bool isFallback, Encoding logEncoding)
         {
             // Initialize _logPath and get fallback string at the end of the filename if true or none if false.
@@ -132,7 +144,7 @@ namespace Hi3Helper
             // Append the build name
             fallbackString += LauncherConfig.IsPreview ? "-pre" : "-sta";
             // Append current app version
-            fallbackString += LauncherConfig.AppCurrentVersionString;
+            fallbackString += CurrentLauncherVersion;
             // Append the current instance number
             fallbackString += $"-id{GetTotalInstance()}";
             _logPath = Path.Combine(_logFolder, $"log-{dateString + fallbackString}.log");
@@ -157,6 +169,7 @@ namespace Hi3Helper
             // If the procCount > 0, then procCount - 1. Else, 0
             return procCount > 0 ? procCount - 1 : 0;
         }
+#endif
 
         private ArgumentException ThrowInvalidType() => new ArgumentException("Type must be Default, Error, Warning, Scheme, Game, NoTag or Empty!");
 
@@ -173,6 +186,7 @@ namespace Hi3Helper
             LogType.Scheme => "\u001b[34;1m",
             LogType.Game => "\u001b[35;1m",
             LogType.Debug => "\u001b[36;1m",
+            LogType.GLC => "\u001b[91;1m",
             _ => string.Empty
         };
 
@@ -184,15 +198,16 @@ namespace Hi3Helper
         /// <exception cref="ArgumentException"></exception>
         private string GetLabelString(LogType type) => type switch
         {
-            LogType.Default => "[Info]",
-            LogType.Error => "[Erro]",
-            LogType.Warning => "[Warn]",
-            LogType.Scheme => "[Schm]",
-            LogType.Game => "[Game]",
-            LogType.Debug => "[DBG]",
-            LogType.NoTag => "      ",
+            LogType.Default => "[Info]  ",
+            LogType.Error   => "[Erro]  ",
+            LogType.Warning => "[Warn]  ",
+            LogType.Scheme  => "[Schm]  ",
+            LogType.Game    => "[Game]  ",
+            LogType.Debug   => "[DBG]   ",
+            LogType.GLC     => "[GLC]   ",
+            LogType.NoTag   => "      ",
             _ => throw ThrowInvalidType()
         };
-        #endregion
+#endregion
     }
 }

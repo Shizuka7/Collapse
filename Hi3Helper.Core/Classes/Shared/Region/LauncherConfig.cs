@@ -1,13 +1,10 @@
 using Hi3Helper.Data;
-#if !DISABLEDISCORD
-using Hi3Helper.DiscordPresence;
-#endif
 using Hi3Helper.Screen;
 using Hi3Helper.Shared.ClassStruct;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Numerics;
 using System.Text;
@@ -18,18 +15,20 @@ namespace Hi3Helper.Shared.Region
     #region CDN Property
     public struct CDNURLProperty : IEquatable<CDNURLProperty>
     {
-        public string URLPrefix { get; set; }
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public bool PartialDownloadSupport { get; set; }
+        public string URLPrefix { get; init; }
+        public string Name { get; init; }
+        public string Description { get; init; }
+        public bool PartialDownloadSupport { get; init; }
         public bool Equals(CDNURLProperty other) => URLPrefix == other.URLPrefix && Name == other.Name && Description == other.Description;
     }
     #endregion
 
+    [SuppressMessage("ReSharper", "InconsistentNaming")]
+    [SuppressMessage("ReSharper", "RedundantDefaultMemberInitializer")]
     public static class LauncherConfig
     {
         #region Main Launcher Config Methods
-                public static void InitAppPreset()
+        public static void InitAppPreset()
         {
             // Initialize resolution settings first and assign AppConfigFile to ProfilePath
             InitScreenResSettings();
@@ -64,7 +63,7 @@ namespace Hi3Helper.Shared.Region
                 IsFirstInstall = true;
 
                 // Reset GameFolder to default value
-                SetAppConfigValue("GameFolder", AppSettingsTemplate["GameFolder"]);
+                SetAppConfigValue("GameFolder", AppSettingsTemplate!["GameFolder"]);
 
                 // Force enable Console Log and return
                 Logger._log = new LoggerConsole(AppGameLogsFolder, Encoding.UTF8);
@@ -79,23 +78,26 @@ namespace Hi3Helper.Shared.Region
             IsFirstInstall = !(IsConfigFileExist && IsUserHasPermission);
         }
 
-        public static bool IsConfigKeyExist(string key) => appIni.Profile[SectionName].ContainsKey(key);
-        public static IniValue GetAppConfigValue(string key) => appIni.Profile[SectionName][key];
+        public static bool IsConfigKeyExist(string key) => appIni.Profile![SectionName!]!.ContainsKey(key!);
+        public static IniValue GetAppConfigValue(string key) => appIni.Profile![SectionName]![key!];
         public static void SetAndSaveConfigValue(string key, IniValue value)
         {
             SetAppConfigValue(key, value);
             SaveAppConfig();
+            #if DEBUG
+            Logger.LogWriteLine($"SetAndSaveConfigValue::Key[{key}]::Value[{value}]", LogType.Debug);
+            #endif
         }
-        public static void SetAppConfigValue(string key, IniValue value) => appIni.Profile[SectionName][key] = value;
+        public static void SetAppConfigValue(string key, IniValue value) => appIni.Profile![SectionName]![key!] = value;
 
-        public static void LoadAppConfig() => appIni.Profile.Load(appIni.ProfilePath);
-        public static void SaveAppConfig() => appIni.Profile.Save(appIni.ProfilePath);
+        public static void LoadAppConfig() => appIni.Profile!.Load(appIni.ProfilePath);
+        public static void SaveAppConfig() => appIni.Profile!.Save(appIni.ProfilePath);
 
         public static void CheckAndSetDefaultConfigValue()
         {
-            foreach (KeyValuePair<string, IniValue> Entry in AppSettingsTemplate)
+            foreach (KeyValuePair<string, IniValue> Entry in AppSettingsTemplate!)
             {
-                if (!appIni.Profile[SectionName].ContainsKey(Entry.Key) || string.IsNullOrEmpty(appIni.Profile[SectionName][Entry.Key].Value))
+                if (!appIni.Profile![SectionName]!.ContainsKey(Entry.Key!) || string.IsNullOrEmpty(appIni.Profile[SectionName][Entry.Key].Value))
                 {
                     SetAppConfigValue(Entry.Key, Entry.Value);
                 }
@@ -106,20 +108,17 @@ namespace Hi3Helper.Shared.Region
         #endregion
 
         #region Misc Methods
-        public static void LoadGamePreset()
-        {
-            AppGameFolder = Path.Combine(GetAppConfigValue("GameFolder").ToString());
-        }
+        public static void LoadGamePreset() => AppGameFolder = Path.Combine(GetAppConfigValue("GameFolder").ToString()!);
 
         public static void GetScreenResolutionString()
         {
-            foreach (Size res in ScreenProp.screenResolutions)
-                ScreenResolutionsList.Add($"{res.Width}x{res.Height}");
+            foreach (var res in ScreenProp.screenResolutions!)
+                ScreenResolutionsList!.Add($"{res.Width}x{res.Height}");
         }
 
         private static bool IsDriveExist(string path)
         {
-            return new DriveInfo(Path.GetPathRoot(path)).IsReady;
+            return new DriveInfo(Path.GetPathRoot(path)!).IsReady;
         }
 
         private static void InitScreenResSettings()
@@ -130,43 +129,49 @@ namespace Hi3Helper.Shared.Region
         #endregion
 
         #region CDN List
-        public static List<CDNURLProperty> CDNList => new List<CDNURLProperty>
-                                                      {
-                                                          new CDNURLProperty
-                                                          {
-                                                              Name = "GitHub",
-                                                              URLPrefix = "https://github.com/neon-nyan/CollapseLauncher-ReleaseRepo/raw/main",
-                                                              Description = Lang._Misc.CDNDescription_Github,
-                                                              PartialDownloadSupport = true
-                                                          },
-                                                          new CDNURLProperty
-                                                          {
-                                                              Name = "Cloudflare",
-                                                              URLPrefix = "https://r2.bagelnl.my.id/cl-cdn",
-                                                              Description = Lang._Misc.CDNDescription_Cloudflare,
-                                                              PartialDownloadSupport = true
-                                                          },
-                                                          new CDNURLProperty
-                                                          {
-                                                              Name = "Bitbucket",
-                                                              URLPrefix = "https://bitbucket.org/neon-nyan/collapselauncher-releaserepo/raw/main",
-                                                              Description = Lang._Misc.CDNDescription_Bitbucket
-                                                          }
-                                                      };
+        public static List<CDNURLProperty> CDNList => new()
+          {
+              new CDNURLProperty
+              {
+                  Name = "GitHub",
+                  URLPrefix = "https://github.com/neon-nyan/CollapseLauncher-ReleaseRepo/raw/main",
+                  Description = Lang!._Misc!.CDNDescription_Github,
+                  PartialDownloadSupport = true
+              },
+              new CDNURLProperty
+              {
+                  Name = "Cloudflare",
+                  URLPrefix = "https://r2.bagelnl.my.id/cl-cdn",
+                  Description = Lang!._Misc!.CDNDescription_Cloudflare,
+                  PartialDownloadSupport = true
+              },
+              new CDNURLProperty
+              {
+                  Name = "GitLab",
+                  URLPrefix = "https://gitlab.com/bagusnl/CollapseLauncher-ReleaseRepo/-/raw/main/",
+                  Description = Lang!._Misc!.CDNDescription_GitLab
+              },
+              new CDNURLProperty
+              {
+                  Name = "Coding",
+                  URLPrefix = "https://ohly-generic.pkg.coding.net/collapse/release/",
+                  Description = Lang!._Misc!.CDNDescription_Coding
+              },
+          };
 
-        public static CDNURLProperty GetCurrentCDN() => CDNList[GetAppConfigValue("CurrentCDN").ToInt()];
+        public static CDNURLProperty GetCurrentCDN() => CDNList![GetAppConfigValue("CurrentCDN").ToInt()];
         #endregion
 
         #region Misc Fields
-        public static Vector3 Shadow16 = new Vector3(0, 0, 16);
-        public static Vector3 Shadow32 = new Vector3(0, 0, 32);
-        public static Vector3 Shadow48 = new Vector3(0, 0, 48);
+        public static Vector3 Shadow16 = new(0, 0, 16);
+        public static Vector3 Shadow32 = new(0, 0, 32);
+        public static Vector3 Shadow48 = new(0, 0, 48);
         // Format in milliseconds
         public static int RefreshTime = 250;
 
         const         string       SectionName = "app";
         public static string       startupBackgroundPath;
-        public static List<string> ScreenResolutionsList = new List<string>();
+        public static List<string> ScreenResolutionsList = new();
 
         public const long AppDiscordApplicationID     = 1138126643592970251;
         public const long AppDiscordApplicationID_HI3 = 1124126288370737314;
@@ -178,14 +183,21 @@ namespace Hi3Helper.Shared.Region
         public const string AppGameConfigV2URLPrefix    = "/metadata/metadatav2_{0}.json";
         public const string AppGameRepairIndexURLPrefix = "/metadata/repair_indexes/{0}/{1}/index";
         public const string AppGameRepoIndexURLPrefix   = "/metadata/repair_indexes/{0}/repo";
+
+        public static IntPtr AppIconLarge;
+        public static IntPtr AppIconSmall;
         #endregion
 
         #region App Config Definitions
-        public static AppIniStruct appIni = new AppIniStruct();
-        public static string AppFolder = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
-        public static string AppDefaultBG = Path.Combine(AppFolder, "Assets", "Images", "default.png");
-        public static string AppLangFolder = Path.Combine(AppFolder, "Lang");
-        public static string AppDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "AppData", "LocalLow", "CollapseLauncher");
+        public static AppIniStruct appIni;
+        
+        public static readonly string AppFolder = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule!.FileName);
+        public static readonly string AppDefaultBG = Path.Combine(AppFolder!, "Assets", "Images", "PageBackground", "default.png");
+        
+        public static readonly string AppLangFolder = Path.Combine(AppFolder, "Lang");
+        public static readonly string AppDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "AppData", "LocalLow", "CollapseLauncher");
+        
+        public static string AppImagesFolder = Path.Combine(AppFolder, "Assets", "Images");
         public static string AppGameFolder
         {
             get => GetAppConfigValue("GameFolder").ToString();
@@ -196,18 +208,19 @@ namespace Hi3Helper.Shared.Region
         {
             get
             {
-                string execName = Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule.FileName);
+                string execName = Path.GetFileNameWithoutExtension(Process.GetCurrentProcess().MainModule!.FileName);
                 string dirPath = AppFolder;
-                return Path.Combine(dirPath, execName + ".exe");
+                return Path.Combine(dirPath!, execName + ".exe");
             }
         }
         public static string AppExecutableName      { get => Path.GetFileName(AppExecutablePath); }
-        public static string AppGameImgFolder       { get => Path.Combine(AppGameFolder,    "_img"); }
-        public static string AppGameImgCachedFolder { get => Path.Combine(AppGameImgFolder, "cached"); }
-        public static string AppGameLogsFolder      { get => Path.Combine(AppGameFolder,    "_logs"); }
-        public static string AppConfigFile      = Path.Combine(AppDataFolder,               "config.ini");
-        public static string AppNotifIgnoreFile = Path.Combine(AppDataFolder,               "ignore_notif_ids.json");
-        public static string AppCurrentVersionString { get; set; }
+        public static string AppGameImgFolder       { get => Path.Combine(AppGameFolder!,    "_img"); }
+        public static string AppGameImgCachedFolder { get => Path.Combine(AppGameImgFolder!, "cached"); }
+        public static string AppGameLogsFolder      { get => Path.Combine(AppGameFolder!,    "_logs"); }
+        
+        public static readonly string AppConfigFile      = Path.Combine(AppDataFolder!, "config.ini");
+        public static readonly string AppNotifIgnoreFile = Path.Combine(AppDataFolder,  "ignore_notif_ids.json");
+        
         public static string GamePathOnSteam;
         public static long   AppGameConfigLastUpdate;
         public static int AppCurrentThread
@@ -219,20 +232,14 @@ namespace Hi3Helper.Shared.Region
             }
         }
         public static int AppCurrentDownloadThread => GetAppConfigValue("DownloadThread").ToInt();
-        public static string AppGameConfigMetadataFolder { get => Path.Combine(AppGameFolder, "_metadata"); }
-        public static string AppGameConfigV2StampPath { get => Path.Combine(AppGameConfigMetadataFolder, "stampv2.json"); }
-        public static string AppGameConfigV2MetadataPath { get => Path.Combine(AppGameConfigMetadataFolder, "metadatav2.json"); }
+        public static string AppGameConfigMetadataFolder { get => Path.Combine(AppGameFolder!, "_metadatav3"); }
 
-#if !DISABLEDISCORD
-        public static DiscordPresenceManager AppDiscordPresence;
-#endif
+        public static readonly bool IsAppLangNeedRestart    = false;
 
-        public static bool RequireAdditionalDataDownload;
-        public static bool IsThisRegionInstalled            = false;
         public static bool IsPreview                        = false;
         public static bool IsAppThemeNeedRestart            = false;
-        public static bool IsAppLangNeedRestart             = false;
         public static bool IsChangeRegionWarningNeedRestart = false;
+        public static bool IsInstantRegionNeedRestart       = false;
         public static bool IsFirstInstall                   = false;
         public static bool IsConsoleEnabled
         {
@@ -248,6 +255,17 @@ namespace Hi3Helper.Shared.Region
         {
             get => GetAppConfigValue("ShowRegionChangeWarning").ToBool();
             set => SetAndSaveConfigValue("ShowRegionChangeWarning", value);
+        }
+
+        private static bool? _cachedIsInstantRegionChange = null;
+        public static bool IsInstantRegionChange
+        {
+            get
+            {
+                _cachedIsInstantRegionChange ??= GetAppConfigValue("UseInstantRegionChange").ToBool();
+                return (bool)_cachedIsInstantRegionChange;
+            }
+            set => SetAndSaveConfigValue("UseInstantRegionChange", value);
         }
 
         public static bool                 ForceInvokeUpdate     = false;
@@ -269,7 +287,7 @@ namespace Hi3Helper.Shared.Region
             #endif
             { "EnableMultipleInstance", false },
             { "DontAskUpdate", false },
-            { "ThemeMode", new IniValue(AppThemeMode.Dark) },
+            { "ThemeMode", new IniValue(AppThemeMode.Default) },
             { "AppLanguage", "en-us" },
             { "UseCustomBG", false },
             { "ShowEventsPanel", true },
@@ -282,6 +300,7 @@ namespace Hi3Helper.Shared.Region
             #if !DISABLEDISCORD
             { "EnableDiscordRPC", false },
             { "EnableDiscordGameStatus", true },
+            { "EnableDiscordIdleStatus", true},
             #endif
             { "EnableAcrylicEffect", true },
             { "IncludeGameLogs", false },
@@ -291,7 +310,12 @@ namespace Hi3Helper.Shared.Region
             { "ForceGIHDREnable", false },
             { "HI3IgnoreMediaPack", false },
             { "GameLaunchedBehavior", "Minimize" }, // Possible Values: "Minimize", "ToTray", and "Nothing"
-            { "MinimizeToTray", false }
+            { "MinimizeToTray", false },
+            { "UseExternalBrowser", false },
+            { "EnableWaifu2X", false },
+            { "BackgroundAudioVolume", 0.5d },
+            { "BackgroundAudioIsMute", true },
+            { "UseInstantRegionChange", true }
         };
         #endregion
     }

@@ -1,8 +1,12 @@
-﻿using CollapseLauncher.CustomControls;
+using CollapseLauncher.CustomControls;
+using CollapseLauncher.Extension;
+using CollapseLauncher.Helper.Metadata;
 using CommunityToolkit.WinUI;
+using Microsoft.UI;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using System;
@@ -14,207 +18,247 @@ using static CollapseLauncher.Dialogs.SimpleDialogs;
 using static Hi3Helper.Locale;
 using static Hi3Helper.Logger;
 using static Hi3Helper.Shared.Region.LauncherConfig;
+using CollapseUIExt = CollapseLauncher.Extension.UIElementExtensions;
+
+// ReSharper disable PossibleNullReferenceException
+// ReSharper disable AssignNullToNotNullAttribute
 
 namespace CollapseLauncher.Dialogs
 {
     public static class KeyboardShortcuts
     {
+        #region Properties
         public static event EventHandler<int> KeyboardShortcutsEvent;
-        private static int pageNum = 0;
-        private static int oldSender = 0;
+        private static int _pageNum;
+        private static int _oldSender;
+        private static int _buttonWidth;
+        public static bool CannotUseKbShortcuts { get; set; }
+        #endregion
 
-        #region UI Methods
+        #region Show Shortcuts ContentDialog
         public static async Task<ContentDialogResult> Dialog_ShowKbShortcuts(UIElement Content, int page = 0)
         {
-            StackPanel mainStack = new StackPanel() { Orientation = Orientation.Vertical, Margin = new Thickness(0, 0, 0, 0) };
+            _buttonWidth = int.Max(Lang._KbShortcuts.GeneralTab.Length * 5
+                          + Lang._KbShortcuts.SwitchTab.Length * 5
+                          + Lang._KbShortcuts.GameFolderTab.Length * 5
+                          + Lang._KbShortcuts.GameManagementTab.Length * 5
+                          + 5 * 50, 400);
 
-            StackPanel mainStackContent = new StackPanel() { Orientation = Orientation.Horizontal };
+            int swapButtonWidth = Lang._KbShortcuts.Switch_SwapBtn.Length * 5 + 2 * 50;
 
-            List<List<string>> keys = KeyList;
-            oldSender = page;
+            StackPanel mainStack = CollapseUIExt.CreateStackPanel();
+            StackPanel mainStackContent = CollapseUIExt.CreateStackPanel();
+
+            _oldSender = page;
 
             // General shortcuts
-            StackPanel genStack = new StackPanel() { Orientation = Orientation.Vertical, Visibility = Visibility.Collapsed };
-            genStack.Children.Add(new TextBlock { Text = Lang._KbShortcuts.General_Title, FontSize = 16, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 2) });
-            genStack.Children.Add(new MenuFlyoutSeparator() { Margin = new Thickness(0, 8, 0, 8) });
-            genStack.Children.Add(GenerateShortcutBlock(keys[2], Lang._KbShortcuts.General_OpenMenu, Lang._KbShortcuts.General_OpenMenu_Desc));
-            genStack.Children.Add(GenerateShortcutBlock(keys[3], Lang._KbShortcuts.General_GoHome));
-            genStack.Children.Add(GenerateShortcutBlock(keys[4], Lang._KbShortcuts.General_GoSettings));
-            genStack.Children.Add(GenerateShortcutBlock(keys[5], Lang._KbShortcuts.General_OpenNotifTray));
-            genStack.Children.Add(GenerateShortcutBlock(keys[13], Lang._KbShortcuts.General_ReloadRegion, Lang._KbShortcuts.General_ReloadRegion_Desc));
-            genStack.Children.Add(new MenuFlyoutSeparator() { Margin = new Thickness(0, 10, 0, 8) });
-            pageNum++;
+            StackPanel genStack = CollapseUIExt.CreateStackPanel().WithVisibility(Visibility.Collapsed).WithWidth(_buttonWidth);
+            genStack.AddElementToStackPanel(
+                new TextBlock
+                {
+                    Text        = Lang._KbShortcuts.General_Title,
+                    FontSize    = 16,
+                    FontWeight  = FontWeights.Bold
+                }.WithMargin(0d, 0d, 0d, 2d),
+                new MenuFlyoutSeparator().WithMargin(0d, 8d),
+                GenerateShortcutBlock("KbShortcutsMenu",   KbShortcutList["KbShortcutsMenu"],   Lang._KbShortcuts.General_OpenMenu, Lang._KbShortcuts.General_OpenMenu_Desc),
+                GenerateShortcutBlock("HomePage",          KbShortcutList["HomePage"],          Lang._KbShortcuts.General_GoHome),
+                GenerateShortcutBlock("SettingsPage",      KbShortcutList["SettingsPage"],      Lang._KbShortcuts.General_GoSettings),
+                GenerateShortcutBlock("NotificationPanel", KbShortcutList["NotificationPanel"], Lang._KbShortcuts.General_OpenNotifTray),
+                GenerateShortcutBlock("ReloadRegion",      KbShortcutList["ReloadRegion"],      Lang._KbShortcuts.General_ReloadRegion, Lang._KbShortcuts.General_ReloadRegion_Desc),
+                new MenuFlyoutSeparator().WithMargin(0d, 10d, 0d, 8d)
+                );
+            _pageNum++;
 
             // Region/Game Shortcuts
-            StackPanel changeStack = new StackPanel() { Orientation = Orientation.Vertical, Visibility = Visibility.Collapsed };
-            changeStack.Children.Add(new TextBlock { Text = Lang._KbShortcuts.Switch_Title, FontSize = 16, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 2) });
-            changeStack.Children.Add(new TextBlock { Text = Lang._KbShortcuts.Switch_Subtitle, FontSize = 11.5 });
-                        
-            string gameMod = keys[0][0];
-            string regionMod = keys[1][0];
+            StackPanel changeStack = CollapseUIExt.CreateStackPanel().WithVisibility(Visibility.Collapsed).WithWidth(_buttonWidth);
+            Grid changeTitleGrid = CollapseUIExt.CreateGrid()
+                .WithColumns(GridLength.Auto, new(1.0d, GridUnitType.Star)).WithColumnSpacing(5d)
+                .WithVerticalAlignment(VerticalAlignment.Center)
+                .WithHorizontalAlignment(HorizontalAlignment.Stretch);
 
-            StackPanel textBlock = new StackPanel() { Orientation = Orientation.Horizontal };
-            textBlock.Children.Add(new TextBlock()
-            {
-                Text = "",
-                FontSize = 12,
-                VerticalAlignment = VerticalAlignment.Center,
-                FontFamily = Application.Current.Resources["FontAwesomeSolid"] as FontFamily,
-            });
-            textBlock.Children.Add(new TextBlock() { Text = string.Format(Lang._KbShortcuts.Switch_SwapBtn, gameMod, regionMod), Margin = new Thickness(8, 0, 0, 0) });
+            StackPanel changeTitleStack = changeTitleGrid.AddElementToGridColumn(CollapseUIExt.CreateStackPanel(), 0);
+            changeTitleStack.AddElementToStackPanel(
+                new TextBlock
+                {
+                    Text            = Lang._KbShortcuts.Switch_Title, FontSize = 16,
+                    FontWeight      = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 2)
+                },
+                new TextBlock
+                {
+                    Text            = Lang._KbShortcuts.Switch_Subtitle,
+                    FontSize        = 11.5,
+                    TextWrapping    = TextWrapping.Wrap,
+                    MaxWidth        = _buttonWidth - swapButtonWidth
+                });
 
-            Button modifierSwap = new Button()
-            {
-                Content = textBlock,
-                CornerRadius = new CornerRadius(5),
-                DataContext = new List<string> { "Ctrl", "1 - X" },
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Margin = new Thickness(0, -30, 2, 0)
-            };
+            string gameMod = KbShortcutList["GameSelection"].GetFormattedModifier();
+            string regionMod = KbShortcutList["RegionSelection"].GetFormattedModifier();
+
+            Button modifierSwap =
+                CollapseUIExt.CreateButtonWithIcon<Button>(
+                    text:               string.Format(Lang._KbShortcuts!.Switch_SwapBtn, gameMod, regionMod),
+                    iconGlyph:          "",
+                    iconFontFamily:     "FontAwesomeSolid",
+                    buttonStyle:        "DefaultButtonStyle",
+                    iconSize:           12d,
+                    textSize:           null
+                    )
+                .WithDataContext(new KbShortcutChangeData { KeyName = "GameSelection", PageNumber = 1 })
+                .WithHorizontalAlignment(HorizontalAlignment.Right);
+
             modifierSwap.Click += Swap_Click;
-            changeStack.Children.Add(modifierSwap);
+            changeTitleGrid.AddElementToGridColumn(modifierSwap, 1);
+            changeStack.AddElementToStackPanel(changeTitleGrid);
 
-            changeStack.Children.Add(new MenuFlyoutSeparator() { Margin = new Thickness(0, 8, 0, 8) });
-            changeStack.Children.Add(GenerateShortcutBlock(keys[0], Lang._KbShortcuts.Switch_ChangeGame, string.Format(Lang._KbShortcuts.Switch_ChangeGame_Desc, gameMod), false));
-            changeStack.Children.Add(GenerateShortcutBlock(keys[1], Lang._KbShortcuts.Switch_ChangeRegion, string.Format(Lang._KbShortcuts.Switch_ChangeRegion_Desc, regionMod), false));
-            changeStack.Children.Add(new MenuFlyoutSeparator() { Margin = new Thickness(0, 10, 0, 8) });
-            pageNum++;
+            changeStack.AddElementToStackPanel(
+                new MenuFlyoutSeparator().WithMargin(0d, 8d),
+                GenerateShortcutBlock("GameSelection",   KbShortcutList["GameSelection"],   Lang._KbShortcuts.Switch_ChangeGame,   string.Format(Lang._KbShortcuts.Switch_ChangeGame_Desc,   gameMod),   false),
+                GenerateShortcutBlock("RegionSelection", KbShortcutList["RegionSelection"], Lang._KbShortcuts.Switch_ChangeRegion, string.Format(Lang._KbShortcuts.Switch_ChangeRegion_Desc, regionMod), false),
+                new MenuFlyoutSeparator().WithMargin(0d, 10d, 0d, 8d)
+                );
+            _pageNum++;
 
             // Game folder
-            StackPanel gameFolderStack = new StackPanel() { Orientation = Orientation.Vertical, Visibility = Visibility.Collapsed };
-            gameFolderStack.Children.Add(new TextBlock { Text = Lang._KbShortcuts.GameFolder_Title, FontSize = 16, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 2) });
-            gameFolderStack.Children.Add(new MenuFlyoutSeparator() { Margin = new Thickness(0, 8, 0, 8) });
-            gameFolderStack.Children.Add(GenerateShortcutBlock(keys[6], Lang._KbShortcuts.GameFolder_ScreenshotFolder));
-            gameFolderStack.Children.Add(GenerateShortcutBlock(keys[7], Lang._KbShortcuts.GameFolder_MainFolder));
-            gameFolderStack.Children.Add(GenerateShortcutBlock(keys[8], Lang._KbShortcuts.GameFolder_CacheFolder));
-            gameFolderStack.Children.Add(new MenuFlyoutSeparator() { Margin = new Thickness(0, 10, 0, 8) });
-            pageNum++;
+            StackPanel gameFolderStack = CollapseUIExt.CreateStackPanel().WithVisibility(Visibility.Collapsed).WithWidth(_buttonWidth);
+            gameFolderStack.AddElementToStackPanel(
+                new TextBlock { Text = Lang._KbShortcuts.GameFolder_Title, FontSize = 16, FontWeight = FontWeights.Bold }.WithMargin(0d, 0d, 0d, 2d),
+                new MenuFlyoutSeparator().WithMargin(0d, 8d),
+                GenerateShortcutBlock("ScreenshotFolder", KbShortcutList["ScreenshotFolder"], Lang._KbShortcuts.GameFolder_ScreenshotFolder),
+                GenerateShortcutBlock("GameFolder",       KbShortcutList["GameFolder"],       Lang._KbShortcuts.GameFolder_MainFolder),
+                GenerateShortcutBlock("CacheFolder",      KbShortcutList["CacheFolder"],      Lang._KbShortcuts.GameFolder_CacheFolder),
+                new MenuFlyoutSeparator().WithMargin(0d, 10d, 0d, 8d)
+                );
+            _pageNum++;
 
             // Game management
-            StackPanel gameManageStack = new StackPanel() { Orientation = Orientation.Vertical, Visibility = Visibility.Collapsed };
-            gameManageStack.Children.Add(new TextBlock { Text = Lang._KbShortcuts.GameManagement_Title, FontSize = 16, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 2) });
-            gameManageStack.Children.Add(new TextBlock { Text = Lang._KbShortcuts.GameManagement_Subtitle, FontSize = 11.5 });
-            gameManageStack.Children.Add(new MenuFlyoutSeparator() { Margin = new Thickness(0, 8, 0, 8) });
-            gameManageStack.Children.Add(GenerateShortcutBlock(keys[9], Lang._KbShortcuts.GameManagement_ForceCloseGame, Lang._KbShortcuts.GameManagement_ForceCloseGame_Desc));
-            gameManageStack.Children.Add(GenerateShortcutBlock(keys[10], Lang._KbShortcuts.GameManagement_GoRepair));
-            gameManageStack.Children.Add(GenerateShortcutBlock(keys[11], Lang._KbShortcuts.GameManagement_GoSettings));
-            gameManageStack.Children.Add(GenerateShortcutBlock(keys[12], Lang._KbShortcuts.GameManagement_GoCaches));
-            gameManageStack.Children.Add(new MenuFlyoutSeparator() { Margin = new Thickness(0, 10, 0, 8) });
-            pageNum = 0;
+            StackPanel gameManageStack = CollapseUIExt.CreateStackPanel().WithVisibility(Visibility.Collapsed).WithWidth(_buttonWidth);
+            gameManageStack.AddElementToStackPanel(
+                new TextBlock { Text = Lang._KbShortcuts.GameManagement_Title, FontSize = 16, FontWeight = FontWeights.Bold }.WithMargin(0d, 0d, 0d, 2d),
+                new TextBlock { Text = Lang._KbShortcuts.GameManagement_Subtitle, FontSize = 11.5, TextWrapping = TextWrapping.Wrap },
+                new MenuFlyoutSeparator().WithMargin(0d, 8d),
+                GenerateShortcutBlock("ForceCloseGame",   KbShortcutList["ForceCloseGame"],   Lang._KbShortcuts.GameManagement_ForceCloseGame, Lang._KbShortcuts.GameManagement_ForceCloseGame_Desc),
+                GenerateShortcutBlock("RepairPage",       KbShortcutList["RepairPage"],       Lang._KbShortcuts.GameManagement_GoRepair),
+                GenerateShortcutBlock("GameSettingsPage", KbShortcutList["GameSettingsPage"], Lang._KbShortcuts.GameManagement_GoSettings),
+                GenerateShortcutBlock("CachesPage",       KbShortcutList["CachesPage"],       Lang._KbShortcuts.GameManagement_GoCaches),
+                new MenuFlyoutSeparator().WithMargin(0d, 10d, 0d, 8d)
+                );
+            _pageNum = 0;
 
-            StackPanel buttonStack = new StackPanel() { HorizontalAlignment = HorizontalAlignment.Center, Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
+            StackPanel buttonStack = CollapseUIExt.CreateStackPanel(Orientation.Horizontal)
+                .WithMargin(0d, 10d, 0d, 0d).WithHorizontalAlignment(HorizontalAlignment.Center);
 
-            Button genButton = new Button() { DataContext = 0, Content = new TextBlock() { Text = Lang._KbShortcuts.GeneralTab, Margin = new Thickness(5, 0, 5, 0), FontWeight = FontWeights.SemiBold } };
-            Button changeButton = new Button() { DataContext = 1, Content = new TextBlock() { Text = Lang._KbShortcuts.SwitchTab, Margin = new Thickness(5, 0, 5, 0), FontWeight = FontWeights.SemiBold } };
-            Button gameFolderButton = new Button() { DataContext = 2, Content = new TextBlock() { Text = Lang._KbShortcuts.GameFolderTab, Margin = new Thickness(5, 0, 5, 0), FontWeight = FontWeights.SemiBold } };
-            Button gameManagerButton = new Button() { DataContext = 3, Content = new TextBlock() { Text = Lang._KbShortcuts.GameManagementTab, Margin = new Thickness(5, 0, 5, 0), FontWeight = FontWeights.SemiBold } };
+            Button genButton         = CollapseUIExt.CreateButtonWithIcon<Button>(text: Lang._KbShortcuts!.GeneralTab)          .WithDataContext(0);
+            Button changeButton      = CollapseUIExt.CreateButtonWithIcon<Button>(text: Lang._KbShortcuts!.SwitchTab)           .WithDataContext(1);
+            Button gameFolderButton  = CollapseUIExt.CreateButtonWithIcon<Button>(text: Lang._KbShortcuts!.GameFolderTab)       .WithDataContext(2);
+            Button gameManagerButton = CollapseUIExt.CreateButtonWithIcon<Button>(text: Lang._KbShortcuts!.GameManagementTab)   .WithDataContext(3);
 
-            List<object> stacks = new List<object>() { genStack, changeStack, gameFolderStack, gameManageStack };
-            List<object> buttons = new List<object>() { genButton, changeButton, gameFolderButton, gameManagerButton };
+            List<StackPanel> stacks = new() { genStack, changeStack, gameFolderStack, gameManageStack };
+            List<Button> buttons = new() { genButton, changeButton, gameFolderButton, gameManagerButton };
 
             foreach (Button button in buttons)
             {
-                button.Click += (o, e) => { ChangeMenuVisibility((int)((Button)o).DataContext, stacks, buttons); };
-                button.Margin = new Thickness(3, 0, 3, 0);
-                button.CornerRadius = new CornerRadius(15);
-                buttonStack.Children.Add(button);
+                button.Click += (o, _) => { ChangeMenuVisibility((int)((Button)o).DataContext, stacks, buttons); };
+                button.SetMargin(3d, 0d);
+                button.SetCornerRadius(15d);
+                buttonStack.AddElementToStackPanel(button);
             }
 
-            mainStack.Children.Add(mainStackContent);
-            mainStack.Children.Add(buttonStack);
+            mainStack.AddElementToStackPanel(mainStackContent, buttonStack);
+            mainStackContent.AddElementToStackPanel(stacks);
 
-            foreach (StackPanel stk in stacks)
-            {
-                stk.Width = 500;
-                mainStackContent.Children.Add(stk);
-            }
             ChangeMenuVisibility(page, stacks, buttons);
 
             return await SpawnDialog(
                     Lang._KbShortcuts.DialogTitle,
                     mainStack,
                     Content,
-                    Lang._Misc.Close,
-                    null,
-                    null,
-                    ContentDialogButton.Primary
+                    Lang._Misc.Close
                 );
         }
 
-        private static Grid GenerateShortcutBlock(List<string> kbKeys, string description, string example = null, bool enableSwapButton = true)
+        private static Grid GenerateShortcutBlock(string keyName, KbShortcut shortcut, string description, string example = null, bool enableSwapButton = true)
         {
-            Grid shortcut = new Grid()
-            {
-                Margin = new Thickness(0, 8, 0, 8),
-                VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                ColumnSpacing = 5,
-                ColumnDefinitions = { new ColumnDefinition() { Width = GridLength.Auto }, new ColumnDefinition() }
-            };
+            Grid shortcutGrid = CollapseUIExt.CreateGrid()
+                .WithColumns(GridLength.Auto, new(1d, GridUnitType.Star)).WithColumnSpacing(5)
+                .WithMargin(0d, 8d)
+                .WithVerticalAlignment(VerticalAlignment.Center)
+                .WithHorizontalAlignment(HorizontalAlignment.Stretch);
 
-            StackPanel shortcutDesc = new StackPanel()
-            {
-                Margin = new Thickness(0, 1, 5, 1),
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Orientation = Orientation.Vertical,
-                VerticalAlignment = VerticalAlignment.Center
-            };
+            StackPanel shortcutDesc = CollapseUIExt.CreateStackPanel()
+                .WithMargin(0d, 1d, 5d, 1d)
+                .WithHorizontalAlignment(HorizontalAlignment.Left)
+                .WithVerticalAlignment(VerticalAlignment.Center);
 
-            int MaxLen = enableSwapButton ? 320 : 370; 
+            int maxLen = enableSwapButton ? _buttonWidth - 180 : _buttonWidth - 150;
 
             if (example != null)
             {
-                shortcutDesc.Children.Add(new TextBlock() { Text = description, FontSize = 14, Margin = new Thickness(5, 2, 0, 1), TextWrapping = TextWrapping.Wrap, MaxWidth = MaxLen });
-                shortcutDesc.Children.Add(new TextBlock() { Text = example, FontSize = 11, Margin = new Thickness(5, 1, 0, 2), TextWrapping = TextWrapping.Wrap, MaxWidth = MaxLen });
+                shortcutDesc.AddElementToStackPanel(
+                    new TextBlock
+                    {
+                        Text         = description, FontSize = 14,
+                        TextWrapping = TextWrapping.Wrap, MaxWidth = maxLen
+                    }.WithMargin(5d, 2d, 0d, 1d),
+                    new TextBlock
+                    {
+                        Text         = example, FontSize = 11, Margin = new Thickness(5, 1, 0, 2),
+                        TextWrapping = TextWrapping.Wrap, MaxWidth = maxLen
+                    }.WithMargin(5d, 1d, 0d, 2d));
             }
             else
             {
-                shortcutDesc.Children.Add(new TextBlock() { Text = description, FontSize = 14, Margin = new Thickness(5, 1, 5, 1), TextWrapping = TextWrapping.Wrap, MaxWidth = MaxLen });
+                shortcutDesc.AddElementToStackPanel(
+                    new TextBlock
+                    {
+                        Text         = description, FontSize = 14, Margin = new Thickness(5, 1, 5, 1),
+                        TextWrapping = TextWrapping.Wrap, MaxWidth = maxLen
+                    });
             }
 
-            shortcut.Children.Add(shortcutDesc);
-            Grid.SetColumn(shortcutDesc, 0);
+            shortcutGrid.AddElementToGridColumn(shortcutDesc, 0);
 
-            StackPanel shortcutButtons = new StackPanel()
-            {
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Orientation = Orientation.Horizontal
-            };
+            StackPanel shortcutButtons = CollapseUIExt.CreateStackPanel(Orientation.Horizontal)
+                .WithHorizontalAlignment(HorizontalAlignment.Right);
 
-            
-            if (enableSwapButton && kbKeys.Count > 1)
+            if (enableSwapButton)
             {
-                List<string> dataKeys = new List<string> { kbKeys[0], kbKeys[1], description, pageNum.ToString() };
-                Button shortcutSwap = new Button()
-                {
-                    Content = new TextBlock() { Text = "", FontSize = 12, Margin = new Thickness(-5, 0, -5, 0), FontFamily = Application.Current.Resources["FontAwesomeSolid"] as FontFamily },
-                    CornerRadius = new CornerRadius(5),
-                    DataContext = dataKeys,
-                    Margin = new Thickness(0, 0, 5, 0)
-                };
-                shortcutButtons.Children.Add(shortcutSwap);
+                Button shortcutSwap =
+                    CollapseUIExt.CreateButtonWithIcon<Button>(
+                        iconGlyph:      "",
+                        iconSize:       12d,
+                        iconFontFamily: "FontAwesomeSolid",
+                        cornerRadius:   new CornerRadius(5d)
+                    )
+                    .WithMargin(0d, 0d, 5d, 0d)
+                    .WithDataContext(new KbShortcutChangeData
+                    {
+                        Description = description,
+                        PageNumber = _pageNum,
+                        KeyName = keyName,
+                        Shortcut = shortcut
+                    });
+                shortcutButtons.AddElementToStackPanel(shortcutSwap);
                 shortcutSwap.Click += Swap_Click;
             }
 
-            foreach (string key in kbKeys)
+            if (shortcut.Modifier != VirtualKeyModifiers.None)
             {
-                shortcutButtons.Children.Add(CreateKeyBoardButton(key));
-                shortcutButtons.Children.Add(new TextBlock()
-                {
-                    Text = "+",
-                    FontWeight = FontWeights.Bold,
-                    FontSize = 20,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    HorizontalAlignment = HorizontalAlignment.Right
-                });
+                shortcutButtons.AddElementToStackPanel(
+                    CreateKeyBoardButton(shortcut.GetFormattedModifier()),
+                    new TextBlock()
+                    {
+                        Text = "+",
+                        FontWeight = FontWeights.Bold,
+                        FontSize = 20
+                    }.WithVerticalAlignment(VerticalAlignment.Center)
+                    .WithHorizontalAlignment(HorizontalAlignment.Right));
             }
 
-            shortcut.Children.Add(shortcutButtons);
-            shortcutButtons.Children.RemoveAt(shortcutButtons.Children.Count - 1);
+            shortcutButtons.AddElementToStackPanel(CreateKeyBoardButton(shortcut.GetKey(keyName)));
+            shortcutGrid.AddElementToGridColumn(shortcutButtons, 1);
 
-            Grid.SetColumn(shortcutButtons, 1);
-
-            return shortcut;
+            return shortcutGrid;
         }
 
         private static Border CreateKeyBoardButton(string key)
@@ -225,7 +269,7 @@ namespace CollapseLauncher.Dialogs
                 Width = 42,
                 Margin = new Thickness(5, 0, 5, 0),
                 CornerRadius = new CornerRadius(5),
-                Background = Application.Current.Resources["SystemFillColorAttentionBrush"] as SolidColorBrush
+                Background = CollapseUIExt.GetApplicationResource<Brush>("SystemFillColorAttentionBrush")
             };
 
             ThemeShadow ts = new ThemeShadow();
@@ -236,7 +280,7 @@ namespace CollapseLauncher.Dialogs
             TextBlock keybox = new TextBlock()
             {
                 Text = key,
-                Foreground = new SolidColorBrush(Application.Current.RequestedTheme == ApplicationTheme.Dark ? Microsoft.UI.Colors.Black : Microsoft.UI.Colors.White),
+                Foreground = new SolidColorBrush(Application.Current.RequestedTheme == ApplicationTheme.Dark ? Colors.Black : Colors.White),
                 FontWeight = FontWeights.Medium,
                 TextAlignment = TextAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
@@ -247,33 +291,37 @@ namespace CollapseLauncher.Dialogs
             return keyboxBorder;
         }
 
-        private static async void ChangeMenuVisibility(int sender, List<object> stacks, List<object> buttons)
+        private static async void ChangeMenuVisibility<T1, T2>(int sender, List<T1> stacks, List<T2> buttons)
+            where T1 : FrameworkElement
+            where T2 : FrameworkElement
         {
             try
             {
-                (buttons[oldSender] as Button).Style = Application.Current.Resources["DefaultButtonStyle"] as Style; ;
-                StackPanel oldStack = stacks[oldSender] as StackPanel;
-                (buttons[sender] as Button).Style = Application.Current.Resources["AccentButtonStyle"] as Style;
-                StackPanel newStack = stacks[sender] as StackPanel;
+                (buttons[_oldSender] as Button).Style = CollapseUIExt.GetApplicationResource<Style>("DefaultButtonStyle");
+                FrameworkElement oldStack = stacks[_oldSender];
+                (buttons[sender] as Button).Style = CollapseUIExt.GetApplicationResource<Style>("AccentButtonStyle");
+                FrameworkElement newStack = stacks[sender];
 
-                if (sender == oldSender)
+                if (sender == _oldSender)
                 {
                     oldStack.Visibility = Visibility.Collapsed;
                     newStack.Visibility = Visibility.Visible;
                     return;
                 }
 
-                oldSender = sender;
+                _oldSender = sender;
 
                 Storyboard storyboard = new Storyboard();
-                DoubleAnimation OpacityAnimation = new DoubleAnimation();
-                OpacityAnimation.From = 1;
-                OpacityAnimation.To = 0;
-                OpacityAnimation.Duration = new Duration(TimeSpan.FromSeconds(0.2));
+                DoubleAnimation opacityAnimation = new DoubleAnimation()
+                {
+                    From = 1,
+                    To = 0,
+                    Duration = new Duration(TimeSpan.FromSeconds(0.2))
+                };
 
-                Storyboard.SetTarget(OpacityAnimation, oldStack);
-                Storyboard.SetTargetProperty(OpacityAnimation, "Opacity");
-                storyboard.Children.Add(OpacityAnimation);
+                Storyboard.SetTarget(opacityAnimation, oldStack);
+                Storyboard.SetTargetProperty(opacityAnimation, "Opacity");
+                storyboard.Children.Add(opacityAnimation);
 
                 storyboard.Begin();
 
@@ -282,107 +330,122 @@ namespace CollapseLauncher.Dialogs
                 oldStack.Visibility = Visibility.Collapsed;
 
                 Storyboard storyboard2 = new Storyboard();
-                DoubleAnimation OpacityAnimation2 = new DoubleAnimation();
-                OpacityAnimation2.From = 0;
-                OpacityAnimation2.To = 1;
-                OpacityAnimation2.Duration = new Duration(TimeSpan.FromSeconds(0.2));
+                DoubleAnimation opacityAnimation2 = new DoubleAnimation()
+                {
+                    From = 0,
+                    To = 1,
+                    Duration = new Duration(TimeSpan.FromSeconds(0.2))
+                };
 
-                Storyboard.SetTarget(OpacityAnimation2, newStack);
-                Storyboard.SetTargetProperty(OpacityAnimation2, "Opacity");
-                storyboard2.Children.Add(OpacityAnimation2);
+                Storyboard.SetTarget(opacityAnimation2, newStack);
+                Storyboard.SetTargetProperty(opacityAnimation2, "Opacity");
+                storyboard2.Children.Add(opacityAnimation2);
 
                 storyboard2.Begin();
-
             }
             catch (Exception e)
             {
                 LogWriteLine(e.ToString());
             }
         }
-#endregion
+        #endregion
 
-        #region Change Shortcut Methods
-        private static async Task Dialog_SwitchKey(UIElement content, List<string> oldKeys)
+        #region Change Key Combinations
+        private static async Task Dialog_SwitchKey(UIElement content, KbShortcutChangeData data)
         {
-            StackPanel mainSwitchKeyContent = new StackPanel()
-            {
-                Orientation = Orientation.Vertical,
-                Width = 350
-            };
+            StackPanel mainSwitchKeyContent = CollapseUIExt.CreateStackPanel();
+            mainSwitchKeyContent.MinWidth = 350d;
+            mainSwitchKeyContent.MaxWidth = 600d;
 
-            StackPanel HelpStack = new StackPanel() { Orientation = Orientation.Vertical, MaxWidth = 260 };
-            Flyout HelpFlyout = new Flyout() { Content = HelpStack, Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.RightEdgeAlignedTop };
-            HelpStack.Children.Add(new TextBlock()
-            {
-                Text = Lang._KbShortcuts.ChangeShortcut_Help1,
-                Margin = new Thickness(0, 2, 0, 4),
-                TextWrapping = TextWrapping.Wrap
-            });
-            HelpStack.Children.Add(new TextBlock()
-            {
-                Text = Lang._KbShortcuts.ChangeShortcut_Help2,
-                Margin = new Thickness(5, 4, 0, 4)
-            });
-            HelpStack.Children.Add(new TextBlock()
-            {
-                Text = Lang._KbShortcuts.ChangeShortcut_Help3,
-                Margin = new Thickness(5, 4, 0, 8)
-            });
-            HelpStack.Children.Add(new TextBlock()
-            {
-                Text = Lang._KbShortcuts.ChangeShortcut_Help4,
-                Margin = new Thickness(0, 4, 0, 0),
-                TextWrapping = TextWrapping.Wrap
-            });
+            StackPanel helpStack = CollapseUIExt.CreateStackPanel();
+            helpStack.MaxWidth = 360d;
+            Flyout helpFlyout = new Flyout
+                                {
+                                    Content = helpStack,
+                                    Placement = FlyoutPlacementMode.RightEdgeAlignedTop
+                                };
+            helpStack.AddElementToStackPanel(
+                new TextBlock()
+                {
+                    Text = Lang._KbShortcuts.ChangeShortcut_Help1,
+                    TextWrapping = TextWrapping.Wrap
+                }.WithMargin(0d, 2d, 0d, 4d),
+                new TextBlock
+                {
+                    Text = Lang._KbShortcuts.ChangeShortcut_Help2
+                }.WithMargin(5d, 4d, 0d, 4d),
+                new TextBlock
+                {
+                    Text = Lang._KbShortcuts.ChangeShortcut_Help3
+                }.WithMargin(5d, 4d, 0d, 8d),
+                new TextBlock
+                {
+                    Text = Lang._KbShortcuts.ChangeShortcut_Help4,
+                    TextWrapping = TextWrapping.Wrap
+                }.WithMargin(0d, 4d, 0d, 0d));
 
-            StackPanel introPanel = new StackPanel() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, Margin = new Thickness(0, -7, 0, 0) };
-            introPanel.Children.Add(new TextBlock()
+            StackPanel introPanel = CollapseUIExt.CreateStackPanel(Orientation.Horizontal)
+                .WithHorizontalAlignment(HorizontalAlignment.Center)
+                .WithMargin(0d, -7d, 0d, 0d);
+            introPanel.AddElementToStackPanel(new TextBlock
             {
                 Text = Lang._KbShortcuts.ChangeShortcut_Text,
-                Margin = new Thickness(0, 0, 0, 2),
-                TextWrapping = TextWrapping.Wrap,
-                HorizontalAlignment = HorizontalAlignment.Center
-            });
+                TextWrapping = TextWrapping.Wrap
+            }.WithMargin(0d, 0d, 0d, 2d).WithHorizontalAlignment(HorizontalAlignment.Center));
 
-            Button HelpButton = new Button()
-            {
-                Content = new TextBlock() { Text = "info", FontFamily = Application.Current.Resources["FontAwesomeSolid"] as FontFamily, FontSize = 10 },
-                Flyout = HelpFlyout,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Margin = new Thickness(8, -2, 0, 2)
-            };
-            introPanel.Children.Add(HelpButton);
-            mainSwitchKeyContent.Children.Add(introPanel);
+            Button helpButton =
+                CollapseUIExt.CreateButtonWithIcon<Button>(
+                    iconGlyph: "info",
+                    iconFontFamily: "FontAwesomeSolid",
+                    iconSize: 10,
+                    cornerRadius: new CornerRadius(5)
+                )
+                .WithMargin(8, -2, 0, 2)
+                .WithFlyout(helpFlyout);
 
-            mainSwitchKeyContent.Children.Add(new TextBlock()
-            {
-                Text = oldKeys.Last(),
-                Margin = new Thickness(5, 6, 0, 10),
-                TextWrapping = TextWrapping.Wrap,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                FontWeight = FontWeights.Bold
-            });
+            introPanel.AddElementToStackPanel(helpButton);
+            mainSwitchKeyContent.AddElementToStackPanel(
+                introPanel,
+                new TextBlock
+                {
+                    Text = data.Description,
+                    TextWrapping = TextWrapping.Wrap,
+                    FontWeight = FontWeights.Bold
+                }.WithMargin(5d, 6d, 0d, 10d).WithHorizontalAlignment(HorizontalAlignment.Center));
 
-            StackPanel keysPanel = new StackPanel()
-            {
-                Orientation = Orientation.Horizontal,
-                VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Margin = new Thickness(0, 8, 0, -5)
-            };
+            StackPanel keysPanel = CollapseUIExt.CreateStackPanel(Orientation.Horizontal)
+                .WithHorizontalAlignment(HorizontalAlignment.Center)
+                .WithVerticalAlignment(VerticalAlignment.Center)
+                .WithMargin(0d, 8d, 0d, -5d);
 
-            oldKeys = oldKeys.Take(2).ToList();
-
-            keysPanel.Children.Add(CreateKeyBoardButton(oldKeys[0]));
-            keysPanel.Children.Add(new TextBlock() { Text = "+", FontSize = 20, FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
-            keysPanel.Children.Add(CreateKeyBoardButton(oldKeys[1]));
-            keysPanel.Children.Add(new FontIcon() { Glyph = "arrow-right", FontSize = 15, FontFamily = Application.Current.Resources["FontAwesomeSolid"] as FontFamily, Margin = new Thickness(10, 0, 10, 0) });
+            keysPanel.AddElementToStackPanel(CreateKeyBoardButton(data.Shortcut.GetFormattedModifier()));
+            keysPanel.AddElementToStackPanel(new TextBlock
+                                             {
+                                                 Text                = "+", FontSize = 20, FontWeight = FontWeights.Bold,
+                                                 HorizontalAlignment = HorizontalAlignment.Center,
+                                                 VerticalAlignment   = VerticalAlignment.Center
+                                             });
+            
+            keysPanel.AddElementToStackPanel(CreateKeyBoardButton(data.Shortcut.GetKey(data.KeyName)));
+            keysPanel.AddElementToStackPanel(new FontIcon()
+                                             {
+                                                 Glyph      = "arrow-right", FontSize = 15,
+                                                 FontFamily = CollapseUIExt.GetApplicationResource<FontFamily>("FontAwesomeSolid"),
+                                                 Margin     = new Thickness(10, 0, 10, 0)
+                                             });
+            
             Border newKey1 = CreateKeyBoardButton("?");
-            keysPanel.Children.Add(newKey1);
-            keysPanel.Children.Add(new TextBlock() { Text = "+", FontSize = 20, FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center });
+            keysPanel.AddElementToStackPanel(newKey1);
+            keysPanel.AddElementToStackPanel(new TextBlock()
+                                             {
+                                                 Text                = "+", FontSize = 20, FontWeight = FontWeights.Bold,
+                                                 HorizontalAlignment = HorizontalAlignment.Center,
+                                                 VerticalAlignment   = VerticalAlignment.Center
+                                             });
+            
             Border newKey2 = CreateKeyBoardButton("?");
-            keysPanel.Children.Add(newKey2);
-            mainSwitchKeyContent.Children.Add(keysPanel);
+            keysPanel.AddElementToStackPanel(newKey2);
+            mainSwitchKeyContent.AddElementToStackPanel(keysPanel);
 
             ContentDialogCollapse result = new ContentDialogCollapse(ContentDialogTheme.Informational)
             {
@@ -393,75 +456,66 @@ namespace CollapseLauncher.Dialogs
                 SecondaryButtonText = null,
                 IsPrimaryButtonEnabled = false,
                 DefaultButton = ContentDialogButton.Primary,
-                Background = (Brush)Application.Current.Resources["DialogAcrylicBrush"],
+                Background = CollapseUIExt.GetApplicationResource<Brush>("DialogAcrylicBrush"),
                 XamlRoot = content.XamlRoot
             };
 
             int keyCount = 0;
             TextBlock text1 = newKey1.Child as TextBlock;
             TextBlock text2 = newKey2.Child as TextBlock;
-            result.KeyDown += (e, s) =>
+            KbShortcut newShortcut = new KbShortcut();
+
+            result.KeyDown += (_, s) =>
             {
                 VirtualKey inputKey = s.Key;
-                
-                keyCount = 0;
+
                 result.IsPrimaryButtonEnabled = false;
-                switch (s.Key)
+                keyCount = 1;
+                text2.Text = "?";
+                switch (inputKey)
                 {
                     case VirtualKey.Control:
-                        keyCount++;
-                        text1.Text = "Ctrl";
-                        text2.Text = "?";
+                        newShortcut.Modifier = VirtualKeyModifiers.Control;
                         break;
                     case VirtualKey.Shift:
-                        keyCount++;
-                        text1.Text = "Shift";
-                        text2.Text = "?";
+                        newShortcut.Modifier = VirtualKeyModifiers.Shift;
                         break;
                     case VirtualKey.Menu:
-                        keyCount++;
-                        text1.Text = "Alt";
-                        text2.Text = "?";
+                        newShortcut.Modifier = VirtualKeyModifiers.Menu;
                         break;
                     default:
                         keyCount = 0;
-                        text1.Text = "?";
-                        text2.Text = "?";
                         break;
                 }
+                text1.Text = keyCount != 0 ? newShortcut.GetFormattedModifier() : "?";
             };
 
-            List<string> newKeys = null;
-
-            result.KeyUp += (e, s) =>
+            result.KeyUp += (_, s) =>
             {
                 int keyValue = (int)s.Key;
-                
-                if (keyCount >= 1 && ((keyValue >= 0x41 && keyValue <= 0x5A) ||  keyValue == 9)) // Virtual-Key codes for Letters and Tab
-                {
-                    string keyStr = s.Key.ToString();
-                    text2.Text = keyStr;
 
-                    newKeys = new List<string> { text1.Text, text2.Text };
-                    result.IsPrimaryButtonEnabled = ValidKeyCombination(newKeys);
+                if (keyCount >= 1 && keyValue is (>= 0x41 and <= 0x5A) or 9) // Virtual-Key codes for Letters and Tab
+                {
+                    newShortcut.Key = s.Key;
+                    text2.Text = s.Key.ToString();
+
+                    result.IsPrimaryButtonEnabled = ValidKeyCombination(newShortcut);
                 }
             };
 
-
-            if (await result.ShowAsync() == ContentDialogResult.Primary)
-            {
-                ChangeKeybind(oldKeys, newKeys);
-            }
-            return;
+            CannotUseKbShortcuts = true;
+            if (await result.QueueAndSpawnDialog() == ContentDialogResult.Primary)
+                ChangeShortcut(data.KeyName, newShortcut);
+            CannotUseKbShortcuts = false;
         }
 
         private static async void Swap_Click(object sender, RoutedEventArgs e)
         {
-            List<string> keys = (List<string>)(sender as Button).DataContext;
+            KbShortcutChangeData data = (KbShortcutChangeData)(sender as Button).DataContext;
 
-            if (keys[1].StartsWith("1 - "))
+            if (data.KeyName is "GameSelection" or "RegionSelection")
             {
-                SwapKeybind();
+                SwapModifiers();
                 (sender as Button).FindParent<ContentDialogCollapse>().Hide();
                 await Task.Delay(200);
                 await Dialog_ShowKbShortcuts(sender as UIElement, 1);
@@ -472,160 +526,238 @@ namespace CollapseLauncher.Dialogs
                 {
                     (sender as Button).FindParent<ContentDialogCollapse>().Hide();
                     await Task.Delay(200);
-                    await Dialog_SwitchKey(sender as UIElement, keys.SkipLast(1).ToList());
-                    await Dialog_ShowKbShortcuts(sender as UIElement, int.Parse(keys.Last()));
+                    await Dialog_SwitchKey(sender as UIElement, data);
+                    await Dialog_ShowKbShortcuts(sender as UIElement, data.PageNumber);
                 }
                 catch (Exception ex)
                 {
                     LogWriteLine(ex.ToString());
                 }
-
             }
         }
 
-        private static void ChangeKeybind(List<string> oldKeys, List<string> newKeys)
+        private static void ChangeShortcut(string key, KbShortcut newShortcut)
         {
-            try
+            if (!KbShortcutList.TryGetValue(key, out KbShortcut oldShortcut))
             {
-                List<List<string>> keys = KeyList;
-                keys[keys.FindIndex(i => i.SequenceEqual(oldKeys))] = newKeys;
+                oldShortcut = new KbShortcut() { Key = VirtualKey.None, Modifier = VirtualKeyModifiers.None };
+            }
 
-                LogWriteLine($"Swapped {string.Join("+", oldKeys)} with {string.Join("+", newKeys)}");
-                KeyList = keys;
-                KeyboardShortcutsEvent(null, 1);
-            }
-            catch (Exception ex)
-            {
-                LogWriteLine(ex.ToString());
-            }
+            KbShortcutList[key] = newShortcut;
+
+            LogWriteLine($"[KeyboardShortcuts::ChangeKeybind] Swapped {oldShortcut} with {newShortcut} for the key {key}.");
+            SaveKbShortcuts();
+            KeyboardShortcutsEvent(null, 1);
         }
 
-        private static void SwapKeybind()
+        // Swaps the modifiers for the shortcuts related to changing game/region.
+        private static void SwapModifiers()
         {
-            try
-            {
-                List<List<string>> keys = KeyList;
+            (KbShortcutList["GameSelection"], KbShortcutList["RegionSelection"]) = 
+                (KbShortcutList["RegionSelection"], KbShortcutList["GameSelection"]);
 
-                (keys[1][0], keys[0][0]) = (keys[0][0], keys[1][0]);
-
-                KeyList = keys;
-                KeyboardShortcutsEvent(null, 1);
-            }
-            catch (Exception ex)
-            {
-                LogWriteLine(ex.ToString());
-            }
+            SaveKbShortcuts();
+            KeyboardShortcutsEvent(null, 1);
         }
 
         public static void ResetKeyboardShortcuts()
         {
-            KeyList = null;
+            KbShortcutList = null;
+            SaveKbShortcuts();
+            LoadKbShortcuts();
+        }
+
+        private static bool ValidKeyCombination(KbShortcut shortcut)
+        {
+            return !KbShortcutList.Any(x => x.Value.Key == shortcut.Key && x.Value.Modifier == shortcut.Modifier)
+                   && !ForbiddenShortcutList.Any(x => x.Key == shortcut.Key && x.Modifier == shortcut.Modifier);
         }
         #endregion
 
-        #region Conversion and Validation Methods
-        public static VirtualKey StrToVKey(string key)
+        #region Default/Forbidden Keyboard Shortcuts
+        public static readonly Dictionary<string, KbShortcut> DefaultShortcutList = new()
         {
-            //if (key.Contains("Num")) key = "NumberPad" + key[3];
-            return (VirtualKey)Enum.Parse(typeof(VirtualKey), key);
-        }
+            { "GameSelection", new KbShortcut { Modifier = VirtualKeyModifiers.Control, Key = VirtualKey.None } },
+            { "RegionSelection", new KbShortcut { Modifier = VirtualKeyModifiers.Shift, Key = VirtualKey.None } },
 
-        public static VirtualKeyModifiers StrToVKeyModifier(string key)
-        {
-            switch (key)
-            {
-                case "Ctrl":
-                    key = "Control";
-                    break;
-                case "Alt":
-                    key = "Menu";
-                    break;
-            }
+            { "KbShortcutsMenu", new KbShortcut { Modifier = VirtualKeyModifiers.Control, Key = VirtualKey.Tab } },
+            { "HomePage", new KbShortcut { Modifier = VirtualKeyModifiers.Control, Key = VirtualKey.H } },
+            { "SettingsPage", new KbShortcut { Modifier = VirtualKeyModifiers.Control, Key = VirtualKey.S } },
+            { "NotificationPanel", new KbShortcut { Modifier = VirtualKeyModifiers.Control, Key = VirtualKey.Q } },
 
-            return (VirtualKeyModifiers)Enum.Parse(typeof(VirtualKeyModifiers), key);
-        }
-        private static bool ValidKeyCombination(List<string> keys)
-        {
-            return !KeyList.Any(i => i.SequenceEqual(keys)) 
-                && !forbiddenKeyList.Any(i => i.SequenceEqual(keys));
-        }
+            { "ScreenshotFolder", new KbShortcut { Modifier = VirtualKeyModifiers.Shift, Key = VirtualKey.X } },
+            { "GameFolder", new KbShortcut { Modifier = VirtualKeyModifiers.Shift, Key = VirtualKey.F } },
+            { "CacheFolder", new KbShortcut { Modifier = VirtualKeyModifiers.Shift, Key = VirtualKey.G } },
+            { "ForceCloseGame", new KbShortcut { Modifier = VirtualKeyModifiers.Shift, Key = VirtualKey.E } },
+
+            { "RepairPage", new KbShortcut { Modifier = VirtualKeyModifiers.Shift, Key = VirtualKey.R } },
+            { "GameSettingsPage", new KbShortcut { Modifier = VirtualKeyModifiers.Shift, Key = VirtualKey.S } },
+            { "CachesPage", new KbShortcut { Modifier = VirtualKeyModifiers.Shift, Key = VirtualKey.C } },
+
+            { "ReloadRegion", new KbShortcut { Modifier = VirtualKeyModifiers.Control, Key = VirtualKey.R } }
+        };
+
+        private static readonly List<KbShortcut> ForbiddenShortcutList =
+        [
+            new KbShortcut { Modifier = VirtualKeyModifiers.Control, Key = VirtualKey.A },
+            new KbShortcut { Modifier = VirtualKeyModifiers.Control, Key = VirtualKey.X },
+            new KbShortcut { Modifier = VirtualKeyModifiers.Control, Key = VirtualKey.C },
+            new KbShortcut { Modifier = VirtualKeyModifiers.Control, Key = VirtualKey.V }
+        ];
         #endregion
 
-        #region Key Lists
-        private readonly static List<List<string>> defaultKeyList = new List<List<string>>
-                {
-                    new List<string> { "Ctrl", "1 - 3" },   // Game selection
-                    new List<string> { "Shift", "1 - 6" },  // Region selection
+        #region Custom Keyboard Shortcuts
+        public static Dictionary<string, KbShortcut> KbShortcutList = new();
 
-                    new List<string> { "Ctrl", "Tab" },     // Keyboard shortcuts menu
-                    new List<string> { "Ctrl", "H" },       // Home page
-                    new List<string> { "Ctrl", "S" },       // Settings page
-                    new List<string> { "Ctrl", "Q" },       // Notification panel
-
-                    new List<string> { "Shift", "X" },      // Screenshot folder
-                    new List<string> { "Shift", "F" },      // Game folder
-                    new List<string> { "Shift", "G" },      // Cache folder
-                    new List<string> { "Shift", "E" },      // Force close game
-
-                    new List<string> { "Shift", "R" },      // Repair page
-                    new List<string> { "Shift", "S" },      // Game settings page
-                    new List<string> { "Shift", "C" },      // Caches page
-
-                    new List<string> { "Ctrl", "R" }        // Reload region
-
-                };
-
-        private readonly static List<List<string>> forbiddenKeyList = new List<List<string>>
-                {
-                    new List<string> { "Ctrl", "A" },
-                    new List<string> { "Ctrl", "X" },
-                    new List<string> { "Ctrl", "C" },
-                    new List<string> { "Ctrl", "V" }
-                };
-
-        public static List<List<string>> KeyList
+        public static void LoadKbShortcuts()
         {
-            get
-            {
-                string keyListStr = GetAppConfigValue("KbShortcutList").ToString();
-                List<List<string>> resultList = new List<List<string>>();
+            bool saveAfterLoad = false;
+            string keyListStr = GetAppConfigValue("KbShortcutList").ToString();
+            LogWriteLine("[KeyboardShortcuts] The following configuration is gonna be loaded from the .ini file:\n\r\t" + keyListStr);
 
-                if (keyListStr == null)
+            Dictionary<string, KbShortcut> resultList = new();
+
+            if (keyListStr == null)
+            {
+                foreach (var entry in DefaultShortcutList)
                 {
-                    foreach (List<string> list in defaultKeyList)
-                    {
-                        resultList.Add(list);
-                    }
-                    return resultList;
+                    resultList.Add(entry.Key, entry.Value);
                 }
 
+                KbShortcutList = resultList;
+                return;
+            }
+
+            if (!keyListStr.Contains(':'))
+            {
+                saveAfterLoad = true;
+                LogWriteLine($"[KeyboardShortcuts::LoadKbShortcuts] Detected old KbShortcutList! Converting...\n\r\tOld Value:\"{keyListStr}\"",
+                    writeToLog: true);
+                var keyList = DefaultShortcutList.Keys;
+                int index = 0;
                 foreach (string combination in keyListStr.Split('|'))
                 {
-                    resultList.Add(combination.Split(",").ToList());
+                    resultList.Add(keyList.ElementAt(index), KbShortcut.FromOldKeyList(combination.Split(",")));
+                    index++;
                 }
-
-                if (resultList.Count < defaultKeyList.Count)
-                {
-                    int newKeyCount = defaultKeyList.Count - resultList.Count;
-                    resultList.InsertRange(resultList.Count, defaultKeyList.GetRange(resultList.Count, newKeyCount));
-                    KeyList = resultList;
-                }
-
-                return resultList;
             }
-
-            set
+            else
             {
-                value ??= defaultKeyList;
-                string res = "";
-                foreach (List<string> key in value)
+                foreach (string combination in keyListStr.Split('|'))
                 {
-                    res += string.Join(",", key) + "|";
+                    string[] values = combination.Split(":");
+                    resultList.Add(values[0], KbShortcut.FromCode(values[1]));
                 }
-                res = res.Remove(res.Length - 1);
-                LogWriteLine("KeyList was updated to: " + res);
-                SetAndSaveConfigValue("KbShortcutList", res);
             }
+
+            var missingKeys = DefaultShortcutList.Keys.Except(resultList.Keys);
+            var deprecatedKeys = resultList.Keys.Except(DefaultShortcutList.Keys);
+
+            // ReSharper disable PossibleMultipleEnumeration
+            saveAfterLoad = saveAfterLoad || missingKeys.Any() || deprecatedKeys.Any();
+
+            foreach (string key in missingKeys)
+            {
+                resultList.Add(key, DefaultShortcutList[key]);
+            }
+
+            foreach (string key in deprecatedKeys)
+            {
+                resultList.Remove(key);
+            }
+
+            KbShortcutList = resultList;
+
+            if (saveAfterLoad)
+                SaveKbShortcuts();
+        }
+
+        public static void SaveKbShortcuts()
+        {
+            KbShortcutList ??= DefaultShortcutList;
+            string res = "";
+            foreach (var entry in KbShortcutList)
+            {
+                res += $"{entry.Key}:{entry.Value.ToCode()}|";
+            }
+            res = res.Remove(res.Length - 1);
+            LogWriteLine("[KeyboardShortcuts::SaveKbShortcuts] The following configuration was saved:\n\r\t" + res);
+            SetAndSaveConfigValue("KbShortcutList", res);
+        }
+        #endregion
+
+        #region KbShortcut class
+        public class KbShortcut
+        {
+            public VirtualKeyModifiers Modifier { get; set; } = VirtualKeyModifiers.None;
+            public VirtualKey Key { get; set; } = VirtualKey.None;
+
+            public string GetFormattedModifier()
+            {
+                return Modifier switch
+                {
+                    VirtualKeyModifiers.Control => Lang._KbShortcuts.Keyboard_Control,
+                    VirtualKeyModifiers.Menu => Lang._KbShortcuts.Keyboard_Menu,
+                    VirtualKeyModifiers.Shift => Lang._KbShortcuts.Keyboard_Shift,
+                    _ => Modifier.ToString(),
+                };
+            }
+
+            public string GetKey(string dictionaryKey = "")
+            {
+                return dictionaryKey switch
+                {
+                    "GameSelection" => $"1 - {LauncherMetadataHelper.CurrentGameNameCount}",
+                    "RegionSelection" => $"1 - {LauncherMetadataHelper.CurrentGameRegionMaxCount}",
+                    _ => Key.ToString()
+                };
+            }
+
+            public string ToCode()
+            {
+                return (int)Modifier + "," + (int)Key;
+            }
+
+            public static KbShortcut FromCode(string code)
+            {
+                string[] split = code.Split(',');
+                return new KbShortcut { Modifier = (VirtualKeyModifiers)int.Parse(split[0]), Key = (VirtualKey)int.Parse(split[1]) };
+            }
+
+            public static KbShortcut FromOldKeyList(string[] strings)
+            {
+                if (strings.Length != 2)
+                    return null;
+
+                VirtualKeyModifiers mod = strings[0] switch
+                {
+                    "Ctrl" => VirtualKeyModifiers.Control,
+                    "Shift" => VirtualKeyModifiers.Shift,
+                    "Alt" => VirtualKeyModifiers.Menu,
+                    _ => (VirtualKeyModifiers)Enum.Parse(typeof(VirtualKeyModifiers), strings[0])
+                };
+
+                if (strings[1] is "1 - 3" or "1 - 6")
+                    return new KbShortcut { Modifier = mod, Key = VirtualKey.None };
+
+                VirtualKey key = (VirtualKey)Enum.Parse(typeof(VirtualKey), strings[1]);
+                return new KbShortcut { Modifier = mod, Key = key };
+            }
+
+            public override string ToString()
+            {
+                return GetFormattedModifier() + "," + GetKey();
+            }
+        }
+        #endregion
+
+        #region Change Keyboard Shortcut struct
+        private struct KbShortcutChangeData
+        {
+            public string KeyName { get; init; }
+            public KbShortcut Shortcut { get; init; }
+            public string Description { get; init; }
+            public int PageNumber { get; init; }
         }
         #endregion
     }

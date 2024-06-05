@@ -1,8 +1,10 @@
-﻿using Hi3Helper;
+﻿using CollapseLauncher.Helper.Metadata;
+using Hi3Helper;
 using Hi3Helper.Http;
 using Hi3Helper.Preset;
 using Hi3Helper.Shared.ClassStruct;
-using Hi3Helper.SharpHDiffPatch;
+using SharpHDiffPatch.Core;
+using SharpHDiffPatch.Core.Event;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -21,7 +23,7 @@ namespace CollapseLauncher
     {
         public event EventHandler<ConvertProgress> ProgressChanged;
 
-        private PresetConfigV2 SourceProfile, TargetProfile;
+        private PresetConfig SourceProfile, TargetProfile;
         private List<FileProperties> SourceFileManifest;
         private List<FileProperties> TargetFileManifest;
         private Http _http;
@@ -35,7 +37,7 @@ namespace CollapseLauncher
         string ConvertStatus, ConvertDetail;
         byte DownloadThread;
 
-        public GameConversionManagement(PresetConfigV2 SourceProfile, PresetConfigV2 TargetProfile,
+        internal GameConversionManagement(PresetConfig SourceProfile, PresetConfig TargetProfile,
             string BaseURL, string GameVersion, string CookbookPath, CancellationToken Token = new CancellationToken())
         {
             this._http = new Http();
@@ -257,7 +259,7 @@ namespace CollapseLauncher
                 if (Entry.FileSize >= 20 << 20)
                 {
                     await _http.Download(InputURL, OutputPath, DownloadThread, true, Token);
-                    await _http.Merge();
+                    await _http.Merge(Token);
                 }
                 else
                     await _http.Download(InputURL, new FileStream(OutputPath, FileMode.Create, FileAccess.Write), null, null, Token);
@@ -453,7 +455,7 @@ namespace CollapseLauncher
                                                    Math.Round((StartSize / (double)EndSize) * 100, 2);
         public long ProgressSpeed => (long)(StartSize / _TimeSecond);
         public TimeSpan RemainingTime => UseCountUnit ? TimeSpan.FromSeconds(0f) :
-                                                        TimeSpan.FromSeconds((EndSize - StartSize) / Unzeroed(ProgressSpeed));
+                                                        ((EndSize - StartSize) / Unzeroed(ProgressSpeed)).ToTimeSpanNormalized();
         private double Unzeroed(double i) => i == 0 ? 1 : i;
         public string ProgressStatus => _StatusMsg;
         public string ProgressDetail => string.Format(

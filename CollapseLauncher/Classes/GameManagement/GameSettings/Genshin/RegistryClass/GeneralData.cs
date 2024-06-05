@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using static CollapseLauncher.GameSettings.Base.SettingsBase;
 using static Hi3Helper.Logger;
+// ReSharper disable RedundantDefaultMemberInitializer
 
 namespace CollapseLauncher.GameSettings.Genshin
 {
@@ -15,6 +16,16 @@ namespace CollapseLauncher.GameSettings.Genshin
     {
         #region Fields
         private const string _ValueName = "GENERAL_DATA_h2389025596";
+        
+        // Default GENERAL_DATA_h2389025596 value taken from version 4.6.0
+        // For the next person, if there is any addition/deletion to the GeneralData props, please update this :)
+        // Just delete the key from registry (back it up first) then run the game. After server selection is set then you will see this registry appear. 
+        // Open Collapse Genshin GSP in debug mode and you shall see the raw value. Paste them here.
+        // Thank you.
+        // Sincerely, bagel 🥯
+        // (hoyo why you did this to us)
+        private static readonly string _graphicsDataDefault =
+            "{\"deviceUUID\":\"\",\"userLocalDataVersionId\":\"\",\"deviceLanguageType\":1,\"deviceVoiceLanguageType\":1,\"selectedServerName\":\"\",\"localLevelIndex\":0,\"deviceID\":\"\",\"targetUID\":\"\",\"curAccountName\":\"\",\"uiSaveData\":\"\",\"inputData\":\"{\\\"scriptVersion\\\":\\\"OSRELWin4.6.0\\\",\\\"mouseSensitivity\\\":10.0,\\\"joypadSenseIndex\\\":2,\\\"joypadFocusSenseIndex\\\":2,\\\"joypadInvertCameraX\\\":false,\\\"joypadInvertCameraY\\\":false,\\\"joypadInvertFocusCameraX\\\":false,\\\"joypadInvertFocusCameraY\\\":false,\\\"mouseSenseIndex\\\":2,\\\"mouseFocusSenseIndex\\\":2,\\\"touchpadSenseIndex\\\":2,\\\"touchpadFocusSenseIndex\\\":5,\\\"enableTouchpadFocusAcceleration\\\":false,\\\"lastJoypadDefaultScale\\\":1.0,\\\"lastJoypadFocusScale\\\":1.0,\\\"lastPCDefaultScale\\\":0.75,\\\"lastPCFocusScale\\\":1.0,\\\"lastTouchDefaultScale\\\":1.0,\\\"lastTouchFcousScale\\\":1.0,\\\"switchWalkRunByBtn\\\":false,\\\"skiffCameraAutoFix\\\":true,\\\"skiffCameraAutoFixInCombat\\\":false,\\\"cameraDistanceRatio\\\":0.0,\\\"wwiseVibration\\\":true,\\\"isYInited\\\":true,\\\"joypadSenseIndexY\\\":2,\\\"joypadFocusSenseIndexY\\\":2,\\\"mouseSenseIndexY\\\":2,\\\"mouseFocusSenseIndexY\\\":2,\\\"touchpadSenseIndexY\\\":2,\\\"touchpadFocusSenseIndexY\\\":5,\\\"lastJoypadDefaultScaleY\\\":1.0,\\\"lastJoypadFocusScaleY\\\":1.0,\\\"lastPCDefaultScaleY\\\":0.75,\\\"lastPCFocusScaleY\\\":1.0,\\\"lastTouchDefaultScaleY\\\":1.0,\\\"lastTouchFcousScaleY\\\":1.0}\",\"graphicsData\":\"{\\\"currentVolatielGrade\\\":4,\\\"customVolatileGrades\\\":[],\\\"volatileVersion\\\":\\\"OSRELWin4.6.0\\\"}\",\"globalPerfData\":\"{\\\"saveItems\\\":[],\\\"truePortedFromGraphicData\\\":true,\\\"portedVersion\\\":\\\"OSRELWin4.6.0\\\",\\\"volatileUpgradeVersion\\\":0,\\\"portedFromGraphicData\\\":false}\",\"miniMapConfig\":1,\"enableCameraSlope\":true,\"enableCameraCombatLock\":true,\"completionPkg\":false,\"completionPlayGoPkg\":false,\"onlyPlayWithPSPlayer\":false,\"needPlayGoFullPkgPatch\":false,\"resinNotification\":true,\"exploreNotification\":true,\"volumeGlobal\":10,\"volumeSFX\":10,\"volumeMusic\":10,\"volumeVoice\":10,\"audioAPI\":-1,\"audioDynamicRange\":0,\"audioOutput\":0,\"_audioSuccessInit\":true,\"enableAudioChangeAndroidMinimumBufferCapacity\":true,\"audioAndroidMiniumBufferCapacity\":2048,\"vibrationLevel\":0,\"vibrationIntensity\":3,\"usingNewVibrationSetting\":true,\"motionBlur\":true,\"gyroAiming\":false,\"gyroHorMoveSpeedIndex\":2,\"gyroVerMoveSpeedIndex\":2,\"gyroHorReverse\":false,\"gyroVerReverse\":false,\"gyroRotateType\":0,\"gyroExcludeRightStickVerInput\":false,\"firstHDRSetting\":true,\"maxLuminosity\":0.0,\"uiPaperWhite\":0.0,\"scenePaperWhite\":0.0,\"gammaValue\":2.20000004768372,\"enableHDR\":false,\"_overrideControllerMapKeyList\":[],\"_overrideControllerMapValueList\":[],\"rewiredDisableKeyboard\":false,\"rewiredEnableKeyboard\":false,\"rewiredEnableEDS\":false,\"disableRewiredDelayInit\":false,\"disableRewiredInitProtection\":false,\"conflictKeyBindingElementId\":[],\"conflictKeyBindingActionId\":[],\"lastSeenPreDownloadTime\":0,\"lastSeenSettingResourceTabScriptVersion\":\"\",\"enableEffectAssembleInEditor\":true,\"forceDisableQuestResourceManagement\":false,\"needReportQuestResourceDeleteStatusFiles\":false,\"disableTeamPageBackgroundSwitch\":false,\"disableHttpDns\":false,\"mtrCached\":false,\"mtrIsOpen\":false,\"mtrMaxTTL\":32,\"mtrTimeOut\":5000,\"mtrTraceCount\":5,\"mtrAbortTimeOutCount\":3,\"mtrAutoTraceInterval\":0,\"mtrTraceCDEachReason\":600,\"mtrTimeInterval\":1000,\"mtrBanReasons\":[],\"_customDataKeyList\":[],\"_customDataValueList\":[],\"_serializedCodeSwitches\":[],\"urlCheckCached\":false,\"urlCheckIsOpen\":false,\"urlCheckAllIP\":false,\"urlCheckTimeOut\":5000,\"urlCheckSueecssTraceCount\":5,\"urlCheckErrorTraceCount\":30,\"urlCheckAbortTimeOutCount\":3,\"urlCheckTimeInterval\":1000,\"urlCheckCDEachReason\":600,\"urlCheckBanReasons\":[],\"mtrUseOldWinVersion\":false,\"greyTestDeviceUniqueId\":\"\",\"muteAudioOnAppMinimized\":false,\"disableFallbackControllerType\":false,\"lastShowDoorProgress\":-1.0,\"globalPerfSettingVersion\":2}";
         #endregion
 
         #region Properties
@@ -23,7 +34,7 @@ namespace CollapseLauncher.GameSettings.Genshin
         //Thanks Myp3a!
 
         public string deviceUUID { get; set; } = "";
-        public string userLocalDataVersionId { get; set; } = "0.0.1";
+        public string userLocalDataVersionId { get; set; } = "";
 
         /// <summary>
         /// This define "<c>Text Language</c>" in-game settings. <br/>
@@ -96,13 +107,11 @@ namespace CollapseLauncher.GameSettings.Genshin
         /// This is a dict that keeps track of graphics settings changes.<br/>
         /// Always port graphicsData to this also, if not then settings are not applied.
         /// </summary>
-        // Temporary for fallback before the implementation is made
-        [JsonIgnore]
-        public GlobalPerfData globalPerfData { get; set; }
-
         [JsonPropertyName("globalPerfData")]
         public string _globalPerfData { get; set; }
 
+        [JsonIgnore]
+        public GlobalPerfData globalPerfData { get; set; }
 
         public int miniMapConfig { get; set; } = 1;
 
@@ -284,37 +293,43 @@ namespace CollapseLauncher.GameSettings.Genshin
         /// </summary>
         public bool disableTeamPageBackgroundSwitch { get; set; } = false;
 
-        public bool mtrCached { get; set; } = true;
-        public bool mtrIsOpen { get; set; } = true;
-        public int mtrMaxTTL { get; set; } = 32;
-        public int mtrTimeOut { get; set; } = 5000;
-        public int mtrTraceCount { get; set; } = 5;
-        public int mtrAbortTimeOutCount { get; set; } = 3;
-        public int mtrAutoTraceInterval { get; set; } = 3600;
-        public int mtrTraceCDEachReason { get; set; } = 600;
-        public int mtrTimeInterval { get; set; } = 1000;
-        public List<object> mtrBanReasons { get; set; }
-        public List<string> _customDataKeyList { get; set; }
-        public List<string> _customDataValueList { get; set; }
-        public List<int> _serializedCodeSwitches { get; set; }
-        public bool urlCheckCached { get; set; } = false;
-        public bool urlCheckIsOpen { get; set; } = true;
-        public bool urlCheckAllIP { get; set; } = false;
-        public int urlCheckTimeOut { get; set; } = 5000;
-        public int urlCheckSueecssTraceCount { get; set; } = 5;
-        public int urlCheckErrorTraceCount { get; set; } = 30;
-        public int urlCheckAbortTimeOutCount { get; set; } = 3;
-        public int urlCheckTimeInterval { get; set; } = 1000;
-        public int urlCheckCDEachReason { get; set; } = 600;
-        public List<object> urlCheckBanReasons { get; set; }
-        public bool mtrUseOldWinVersion { get; set; } = false;
-        public string greyTestDeviceUniqueId { get; set; } = "";
+        public bool         disableHttpDns            { get; set; } = false;
+        public bool         mtrCached                 { get; set; } = false;
+        public bool         mtrIsOpen                 { get; set; } = true;
+        public int          mtrMaxTTL                 { get; set; } = 32;
+        public int          mtrTimeOut                { get; set; } = 5000;
+        public int          mtrTraceCount             { get; set; } = 5;
+        public int          mtrAbortTimeOutCount      { get; set; } = 3;
+        public int          mtrAutoTraceInterval      { get; set; } = 3600;
+        public int          mtrTraceCDEachReason      { get; set; } = 600;
+        public int          mtrTimeInterval           { get; set; } = 1000;
+        public List<object> mtrBanReasons             { get; set; }
+        public List<string> _customDataKeyList        { get; set; }
+        public List<string> _customDataValueList      { get; set; }
+        public List<int>    _serializedCodeSwitches   { get; set; }
+        public bool         urlCheckCached            { get; set; } = false;
+        public bool         urlCheckIsOpen            { get; set; } = false;
+        public bool         urlCheckAllIP             { get; set; } = false;
+        public int          urlCheckTimeOut           { get; set; } = 5000;
+        public int          urlCheckSueecssTraceCount { get; set; } = 5;
+        public int          urlCheckErrorTraceCount   { get; set; } = 30;
+        public int          urlCheckAbortTimeOutCount { get; set; } = 3;
+        public int          urlCheckTimeInterval      { get; set; } = 1000;
+        public int          urlCheckCDEachReason      { get; set; } = 600;
+        public List<object> urlCheckBanReasons        { get; set; }
+        public bool         mtrUseOldWinVersion       { get; set; } = false;
+        public string       greyTestDeviceUniqueId    { get; set; } = "";
 
         /// <summary>
         /// This controls if game audio should be disabled when main window is minimized. <br/>
         /// is a boolean, Default: false <br/>
         /// </summary>
         public bool muteAudioOnAppMinimized { get; set; } = false;
+
+        // iunno
+        public bool   disableFallbackControllerType { get; set; } = false;
+        public double lastShowDoorProgress          { get; set; } = -1.0;
+        public int    globalPerfSettingVersion      { get; set; } = 2;
         #endregion
 
         #region Methods
@@ -323,7 +338,7 @@ namespace CollapseLauncher.GameSettings.Genshin
         {
             try
             {
-                if (RegistryRoot == null) throw new NullReferenceException($"Cannot load {_ValueName} since RegistryKey is unexpectedly not initialized!");
+                if (RegistryRoot == null) throw new ArgumentNullException($"Cannot load {_ValueName} since RegistryKey is unexpectedly not initialized!");
                 object value = RegistryRoot.GetValue(_ValueName) ?? throw new ArgumentNullException($"Cannot find registry key {_ValueName}");
 
                 ReadOnlySpan<byte> byteStr = (byte[])value;
@@ -343,23 +358,27 @@ namespace CollapseLauncher.GameSettings.Genshin
                 LogWriteLine($"Loaded Genshin Settings", LogType.Default, true);
 #endif
                 GeneralData data = byteStr.Deserialize<GeneralData>(GenshinSettingsJSONContext.Default) ?? new GeneralData();
-                data.graphicsData = GraphicsData.Load(data._graphicsData);
-                data.globalPerfData = GlobalPerfData.Load(data._globalPerfData, data.graphicsData);
+
+                if (data._graphicsData != null) data.graphicsData = GraphicsData.Load(data._graphicsData);
+                if (data._globalPerfData != null) data.globalPerfData   = GlobalPerfData.Load(data._globalPerfData, data.graphicsData)!;
                 return data;
             }
             catch (Exception ex)
             {
-                LogWriteLine($"Failed while reading {_ValueName}" +
+                LogWriteLine($"Failed while reading {_ValueName}, Default fallback data is used!" +
                              $"\r\n  Please open the game and change any settings, then close normally. After that you can use this feature." +
                              $"\r\n  If the issue persist, please report it on GitHub" +
                              $"\r\n{ex}", LogType.Error, true);
                 ErrorSender.SendException(new Exception(
-                    $"Failed when reading game settings {_ValueName}\r\n" +
-                    $"Please open the game and change any settings, then safely close the game. If the problem persist, report the issue on our GitHub\r\n" +
+                    $"Failed when reading game settings {_ValueName}!\r\nFallback default value is used.\r\n\r\n" +
+                    $"Unless you have never opened the game (fresh installation), please open the game and change any settings, then safely close the game. If the problem persist, report the issue on our GitHub\r\n\r\n" +
                     $"{ex}", ex));
-            }
 
-            return new GeneralData();
+                GeneralData data = _graphicsDataDefault!.Deserialize<GeneralData>(GenshinSettingsJSONContext.Default) ?? new GeneralData();
+                data.graphicsData   = GraphicsData.Load(data._graphicsData!);
+                data.globalPerfData = GlobalPerfData.Load(data._globalPerfData!, data.graphicsData)!;
+                return data;
+            }
         }
 
         public void Save()
@@ -368,8 +387,8 @@ namespace CollapseLauncher.GameSettings.Genshin
             {
                 if (RegistryRoot == null) throw new NullReferenceException($"Cannot save {_ValueName} since RegistryKey is unexpectedly not initialized!");
 
-                _graphicsData = graphicsData.Create(globalPerfData);
-                _globalPerfData = globalPerfData.Save();
+                _graphicsData = graphicsData!.Create(globalPerfData!);
+                _globalPerfData = globalPerfData!.Save()!;
 
                 string data = this.Serialize(GenshinSettingsJSONContext.Default);
                 byte[] dataByte = Encoding.UTF8.GetBytes(data);

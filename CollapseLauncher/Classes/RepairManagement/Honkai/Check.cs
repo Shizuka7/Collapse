@@ -31,42 +31,43 @@ namespace CollapseLauncher
             CheckUnusedAsset(assetIndex, brokenAssetIndex);
 
             // Await the task for parallel processing
-            await Task.Run(() =>
+            try
             {
-                try
+                // Check for skippable assets to skip the check
+                RemoveSkippableAssets(assetIndex);
+
+                // Reset stopwatch
+                RestartStopwatch();
+
+                // Iterate assetIndex and check it using different method for each type and run it in parallel
+                await Parallel.ForEachAsync(assetIndex, new ParallelOptions { MaxDegreeOfParallelism = _threadCount, CancellationToken = token }, async (asset, threadToken) =>
                 {
-                    // Check for skippable assets to skip the check
-                    RemoveSkippableAssets(assetIndex);
-
-                    // Reset stopwatch
-                    RestartStopwatch();
-
-                    // Iterate assetIndex and check it using different method for each type and run it in parallel
-                    Parallel.ForEach(assetIndex, new ParallelOptions { MaxDegreeOfParallelism = _threadCount }, (asset) =>
+                    // Assign a task depends on the asset type
+                    switch (asset.FT)
                     {
-                        // Assign a task depends on the asset type
-                        switch (asset.FT)
-                        {
-                            case FileType.Blocks:
-                                CheckAssetTypeBlocks(asset, brokenAssetIndex, token);
-                                break;
-                            case FileType.Audio:
-                                CheckAssetTypeAudio(asset, brokenAssetIndex, token);
-                                break;
-                            case FileType.Video:
-                                CheckAssetTypeVideo(asset, brokenAssetIndex, token);
-                                break;
-                            default:
-                                CheckAssetTypeGeneric(asset, brokenAssetIndex, token);
-                                break;
-                        }
-                    });
-                }
-                catch (AggregateException ex)
-                {
-                    throw ex.Flatten().InnerExceptions.First();
-                }
-            }).ConfigureAwait(false);
+                        case FileType.Blocks:
+                            await CheckAssetTypeBlocks(asset, brokenAssetIndex, threadToken);
+                            break;
+                        case FileType.Audio:
+                            await CheckAssetTypeAudio(asset, brokenAssetIndex, threadToken);
+                            break;
+                        case FileType.Video:
+                            CheckAssetTypeVideo(asset, brokenAssetIndex);
+                            break;
+                        default:
+                            await CheckAssetTypeGeneric(asset, brokenAssetIndex, threadToken);
+                            break;
+                    }
+                }).ConfigureAwait(false);
+            }
+            catch (AggregateException ex)
+            {
+                throw ex.Flatten().InnerExceptions.First();
+            }
+            catch (Exception)
+            {
+                throw;
+            }
 
             // Re-add the asset index with a broken asset index
             assetIndex.Clear();
@@ -74,7 +75,7 @@ namespace CollapseLauncher
         }
 
         #region VideoCheck
-        private void CheckAssetTypeVideo(FilePropertiesRemote asset, List<FilePropertiesRemote> targetAssetIndex, CancellationToken token)
+        private void CheckAssetTypeVideo(FilePropertiesRemote asset, List<FilePropertiesRemote> targetAssetIndex)
         {
             // Increment current total count
             // _progressTotalCountCurrent++;
@@ -113,7 +114,7 @@ namespace CollapseLauncher
         #endregion
 
         #region AudioCheck
-        private void CheckAssetTypeAudio(FilePropertiesRemote asset, List<FilePropertiesRemote> targetAssetIndex, CancellationToken token)
+        private async ValueTask CheckAssetTypeAudio(FilePropertiesRemote asset, List<FilePropertiesRemote> targetAssetIndex, CancellationToken token)
         {
             // Update activity status
             _status.ActivityStatus = string.Format(Lang._GameRepairPage.Status6, asset.N);
@@ -178,7 +179,7 @@ namespace CollapseLauncher
             using (FileStream filefs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None, _bufferBigLength))
             {
                 // If pass the check above, then do MD5 Hash calculation
-                localCRC = CheckHash(filefs, MD5.Create(), token);
+                localCRC = await CheckHashAsync(filefs, MD5.Create(), token);
 
                 // Get size difference for summarize the _progressTotalSizeCurrent
                 long sizeDifference = asset.S - file.Length;
@@ -214,14 +215,14 @@ namespace CollapseLauncher
                     // Add asset into targetAssetIndex
                     targetAssetIndex.Add(asset);
 
-                    LogWriteLine($"File [T: {asset.FT}]: {asset.N} " + (asset.IsPatchApplicable ? "has an update and patch applicable" : $"is broken! Index CRC: {asset.CRC} <--> File CRC: {localCRC}"), LogType.Warning, true);
+                    LogWriteLine($"File [T: {asset.FT}]: {asset.N} " + (asset.IsPatchApplicable ? "has an update and patch applicable" : $"is broken! Index CRC: {asset.CRC} <--> File CRC: {HexTool.BytesToHexUnsafe(localCRC)}"), LogType.Warning, true);
                 }
             }
         }
         #endregion
 
         #region GenericCheck
-        private void CheckAssetTypeGeneric(FilePropertiesRemote asset, List<FilePropertiesRemote> targetAssetIndex, CancellationToken token)
+        private async ValueTask CheckAssetTypeGeneric(FilePropertiesRemote asset, List<FilePropertiesRemote> targetAssetIndex, CancellationToken token)
         {
             // Update activity status
             _status.ActivityStatus = string.Format(Lang._GameRepairPage.Status6, asset.N);
@@ -274,7 +275,7 @@ namespace CollapseLauncher
             using (FileStream filefs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None, _bufferBigLength))
             {
                 // If pass the check above, then do CRC calculation
-                byte[] localCRC = CheckHash(filefs, MD5.Create(), token);
+                byte[] localCRC = await CheckHashAsync(filefs, MD5.Create(), token);
 
                 // If local and asset CRC doesn't match, then add the asset
                 if (!IsArrayMatch(localCRC, asset.CRCArray))
@@ -348,7 +349,7 @@ namespace CollapseLauncher
             return block.BlockPatchInfo;
         }
 
-        private void CheckAssetTypeBlocks(FilePropertiesRemote asset, List<FilePropertiesRemote> targetAssetIndex, CancellationToken token)
+        private async ValueTask CheckAssetTypeBlocks(FilePropertiesRemote asset, List<FilePropertiesRemote> targetAssetIndex, CancellationToken token)
         {
             // Update activity status
             _status.ActivityStatus = string.Format(Lang._GameRepairPage.Status5, asset.CRC);
@@ -373,10 +374,10 @@ namespace CollapseLauncher
             if ((fileOld?.Exists ?? false) && !file.Exists)
             {
                 // Open and read fileInfo as FileStream 
-                using (FileStream fileOldfs = new FileStream(filePathOld, FileMode.Open, FileAccess.Read, FileShare.None, _bufferBigLength))
+                using (FileStream fileOldfs = new FileStream(filePathOld, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, _bufferBigLength))
                 {
                     // If pass the check above, then do CRC calculation
-                    byte[] localOldCRC = CheckHash(fileOldfs, MD5.Create(), token, false);
+                    byte[] localOldCRC = await CheckHashAsync(fileOldfs, MD5.Create(), token, false);
 
                     // If the hash matches, then add the patch
                     if (IsArrayMatch(localOldCRC, patchInfo?.PatchPairs[0].OldHash))
@@ -456,11 +457,11 @@ namespace CollapseLauncher
             }
 
             // Open and read fileInfo as FileStream 
-            using (FileStream filefs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None, _bufferBigLength))
+            using (FileStream filefs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, _bufferBigLength))
             {
                 // If pass the check above, then do CRC calculation
                 // Additional: the total file size progress is disabled and will be incremented after this
-                byte[] localCRC = CheckHash(filefs, MD5.Create(), token);
+                byte[] localCRC = await CheckHashAsync(filefs, MD5.Create(), token);
 
                 // If local and asset CRC doesn't match, then add the asset
                 if (!IsArrayMatch(localCRC, asset.CRCArray))
@@ -547,6 +548,7 @@ namespace CollapseLauncher
                 bool isIncluded = catalog.Any(x => x.Equals(asset, StringComparison.OrdinalIgnoreCase));
                 bool isScreenshot = asset.Contains("ScreenShot", StringComparison.OrdinalIgnoreCase);
                 bool isLog = asset.EndsWith(".log", StringComparison.OrdinalIgnoreCase);
+                bool isDriver = asset.EndsWith(".sys", StringComparison.OrdinalIgnoreCase);
 
                 // Configuration related
                 bool isWebcaches = asset.Contains("webCaches", StringComparison.OrdinalIgnoreCase);
@@ -580,7 +582,10 @@ namespace CollapseLauncher
                 bool isDirectX = (filename.StartsWith("d3d", StringComparison.OrdinalIgnoreCase) && asset.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
                     || filename.StartsWith("dxgi.dll", StringComparison.OrdinalIgnoreCase);
 
-                if (!isIncluded && !isIni && !isXMFBlocks && !isXMFBlocksVer && !isXMFMeta
+                // Is file ignored
+                bool isFileIgnored = _ignoredUnusedFileList.Contains(asset, StringComparer.OrdinalIgnoreCase);
+
+                if (!isIncluded && !isFileIgnored && !isIni && !isDriver && !isXMFBlocks && !isXMFBlocksVer && !isXMFMeta
                     && !isVersion && !isScreenshot && !isWebcaches && !isSDKcaches && !isLog
                     && !isUSM && !isWwiseHeader && !isAudioManifest && !isBlockPatch
                     && !isDeltaPatch && !isFlags && !isZip && !isDirectX)

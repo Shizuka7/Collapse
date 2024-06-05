@@ -4,6 +4,7 @@ using Hi3Helper.EncTool.Parser.AssetMetadata.SRMetadataAsset;
 using Hi3Helper.Http;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,8 +13,10 @@ using static Hi3Helper.Logger;
 
 namespace CollapseLauncher
 {
+    [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
     internal partial class StarRailCache
     {
+        // ReSharper disable once UnusedParameter.Local
         private async Task<bool> Update(List<SRAsset> updateAssetIndex, List<SRAsset> assetIndex, CancellationToken token)
         {
             // Assign Http client
@@ -67,7 +70,7 @@ namespace CollapseLauncher
             if (asset.Size >= _sizeForMultiDownload)
             {
                 await httpClient.Download(asset.RemoteURL, asset.LocalName, _downloadThreadCount, true, token);
-                await httpClient.Merge();
+                await httpClient.Merge(token);
             }
             // Do single-session download for others
             else
@@ -99,7 +102,7 @@ namespace CollapseLauncher
             {
                 // Update current activity status
                 _status.IsProgressTotalIndetermined = false;
-                string timeLeftString = string.Format(Lang._Misc.TimeRemainHMSFormat, TimeSpan.FromSeconds((_progressTotalSizeCurrent - _progressTotalSize) / ConverterTool.Unzeroed(speed)));
+                string timeLeftString = string.Format(Lang._Misc.TimeRemainHMSFormat, ((_progressTotalSizeCurrent - _progressTotalSize) / ConverterTool.Unzeroed(speed)).ToTimeSpanNormalized());
                 _status.ActivityTotal = string.Format(Lang._Misc.Downloading + ": {0}/{1} ", _progressTotalCountCurrent, _progressTotalCount)
                                        + string.Format($"({Lang._Misc.SpeedPerSec})", ConverterTool.SummarizeSizeSimple(speed))
                                        + $" | {timeLeftString}";

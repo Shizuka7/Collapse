@@ -1,12 +1,14 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
 namespace Hi3Helper.Data
 {
+    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
     public class AppInfo
     {
         public int Id { get; internal set; }
@@ -25,9 +27,9 @@ namespace Hi3Helper.Data
         public static List<AppInfo> GetSteamApps(List<string> steamLibs)
         {
             var apps = new List<AppInfo>();
-            foreach (var lib in steamLibs)
+            foreach (var lib in steamLibs!)
             {
-                var appMetaDataPath = Path.Combine(lib, "SteamApps");
+                var appMetaDataPath = Path.Combine(lib!, "SteamApps");
                 foreach (var file in Directory.EnumerateFiles(appMetaDataPath, "*.acf"))
                 {
                     var appInfo = GetAppInfo(file);
@@ -46,7 +48,7 @@ namespace Hi3Helper.Data
 
         public static AppInfo GetAppInfo(string appMetaFile)
         {
-            var fileDataLines = File.ReadAllLines(appMetaFile);
+            var fileDataLines = File.ReadAllLines(appMetaFile!);
             var dic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
 #if DEBUG
@@ -77,11 +79,11 @@ namespace Hi3Helper.Data
                 var installDir = dic["installDir"];
 
                 var path = Path.GetDirectoryName(appMetaFile);
-                var libGameRoot = Path.Combine(path, "common", installDir);
+                var libGameRoot = Path.Combine(path!, "common", installDir!);
 
                 if (!Directory.Exists(libGameRoot)) return null;
 
-                appInfo.Id = int.Parse(appId);
+                appInfo.Id = int.Parse(appId!);
                 appInfo.Name = name;
                 appInfo.Manifest = appMetaFile;
                 appInfo.GameRoot = libGameRoot;
@@ -93,12 +95,12 @@ namespace Hi3Helper.Data
             return appInfo;
         }
 
-        private static string _appInfoText = null;
+        private static string _appInfoText;
         public static string GetExecutable(AppInfo appInfo)
         {
             if (_appInfoText == null)
             {
-                var appInfoFile = Path.Combine(GetSteamPath(), "appcache", "appinfo.vdf");
+                var appInfoFile = Path.Combine(GetSteamPath()!, "appcache", "appinfo.vdf");
                 var bytes = File.ReadAllBytes(appInfoFile);
                 _appInfoText = Encoding.UTF8.GetString(bytes);
             }
@@ -108,19 +110,25 @@ namespace Hi3Helper.Data
 
             do
             {
-                var startOfDataArea = _appInfoText.IndexOf($"\x00\x01name\x00{appInfo.Name}\x00", startIndex);
-                if (startOfDataArea < 0 && maxTries == 50) startOfDataArea = _appInfoText.IndexOf($"\x00\x01gamedir\x00{appInfo.Name}\x00", startIndex); //Alternative1
-                if (startOfDataArea < 0 && maxTries == 50) startOfDataArea = _appInfoText.IndexOf($"\x00\x01name\x00{appInfo.Name}\x00", startIndex); //Alternative2
+                var startOfDataArea =
+                    _appInfoText.IndexOf($"\x00\x01name\x00{appInfo!.Name}\x00", startIndex, StringComparison.Ordinal);
+                
+                if (startOfDataArea < 0 && maxTries == 50) startOfDataArea = 
+                    _appInfoText.IndexOf($"\x00\x01gamedir\x00{appInfo!.Name}\x00", startIndex, StringComparison.Ordinal); //Alternative1
+                
+                if (startOfDataArea < 0 && maxTries == 50) startOfDataArea = 
+                    _appInfoText.IndexOf($"\x00\x01name\x00{appInfo!.Name}\x00",    startIndex, StringComparison.Ordinal); //Alternative2
+                
                 if (startOfDataArea > 0)
                 {
                     startIndex = startOfDataArea + 10;
                     int nextLaunch = -1;
                     do
                     {
-                        var executable = _appInfoText.IndexOf($"\x00\x01executable\x00", startOfDataArea);
+                        var executable = _appInfoText.IndexOf($"\x00\x01executable\x00", startOfDataArea, StringComparison.Ordinal);
                         if (executable > -1 && nextLaunch == -1)
                         {
-                            nextLaunch = _appInfoText.IndexOf($"\x00\x01launch\x00", executable);
+                            nextLaunch = _appInfoText.IndexOf($"\x00\x01launch\x00", executable, StringComparison.Ordinal);
                         }
 
                         if ((nextLaunch <= 0 || executable < nextLaunch) && executable > 0)
@@ -140,7 +148,7 @@ namespace Hi3Helper.Data
                                     return filename; //Need to use other means to grab the EXE here.
                                 }
 
-                                fullName = Path.Combine(appInfo.GameRoot, filename);
+                                fullName = Path.Combine(appInfo.GameRoot!, filename);
 
                                 startOfDataArea = executable + 1;
                                 startIndex = startOfDataArea + 10;

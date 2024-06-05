@@ -1,19 +1,58 @@
-﻿using System;
+﻿using Hi3Helper;
+using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.NamingConventionBinder;
+using System.Linq;
+using System.Text.RegularExpressions;
 using static CollapseLauncher.InnerLauncherConfig;
+using static Hi3Helper.Logger;
 
 namespace CollapseLauncher
 {
     public static partial class ArgumentParser
     {
-        static RootCommand rootCommand = new RootCommand();
+        private static List<string> allowedProtocolCommands = ["tray", "open"];
+
+        private static RootCommand rootCommand = new RootCommand();
+
         public static void ParseArguments(params string[] args)
         {
             if (args.Length == 0)
             {
                 m_appMode = AppMode.Launcher;
                 return;
+            }
+
+            if (args[0].StartsWith("collapse://")) 
+            {
+                args[0] = args[0].Replace("collapse://", "");
+
+                if (args[0] == "/" || args[0] == "")
+                {
+                    m_appMode = AppMode.Launcher;
+                    return;
+                }
+
+                // Convert web browser format (contains %20 or %22 but no " or space)
+                if ((args[0].Contains("%20") || args[0].Contains("%22")) 
+                    && !(args[0].Contains(' ') || args[0].Contains('"')))
+                {
+                    string convertedArg = args[0].Replace("%20", " ").Replace("%22", "\"");
+
+                    args = Regex.Matches(convertedArg, @"[\""].+?[\""]|[^ ]+", RegexOptions.Compiled)
+                                    .Cast<Match>()
+                                    .Select(x => x.Value.Trim('"')).ToArray();
+                } 
+                
+                args = args.Select(x => x.Trim('/')).Where(x => x != "").ToArray();
+
+                if (allowedProtocolCommands.IndexOf(args[0]) == -1)
+                {
+                    LogWriteLine("This command does not exist or cannot be activated using a protocol.", LogType.Error);
+                    m_appMode = AppMode.Launcher;
+                    return;
+                }
             }
 
             switch (args[0].ToLower())
@@ -52,9 +91,15 @@ namespace CollapseLauncher
                     break;
                 case "tray":
                     m_appMode = AppMode.StartOnTray;
-                    ParseStartOnTrayArguments(args);
+                    break;
+                case "open":
+                    m_appMode = AppMode.Launcher;
                     break;
             }
+
+            AddPublicCommands();
+            rootCommand.Description = "Collapse Launcher is a game client for all currently released miHoYo/Hoyoverse games.\n" +
+                                      "It supports installing games, repairing game files and much more!";
 
             if (rootCommand.Invoke(args) > 0)
             {
@@ -66,41 +111,44 @@ namespace CollapseLauncher
 
         public static void ParseHi3CacheUpdaterArguments(params string[] args)
         {
-            rootCommand.AddArgument(new Argument<string>("hi3cacheupdate", "Update the app or change the Release Channel of the app") { HelpName = null });
-            AddHi3CacheUpdaterOptions();
+            Command hi3cacheupdate = new Command("hi3cacheupdate", "Update the app or change the Release Channel of the app");
+            rootCommand.AddCommand(hi3cacheupdate);
+            AddHi3CacheUpdaterOptions(hi3cacheupdate);
         }
 
         public static void ParseUpdaterArguments(params string[] args)
         {
-            rootCommand.AddArgument(new Argument<string>("update", "Update the app or change the Release Channel of the app") { HelpName = null });
-            AddUpdaterOptions();
+            Command updater = new Command("update", "Update the app or change the Release Channel of the app");
+            rootCommand.AddCommand(updater);
+            AddUpdaterOptions(updater);
         }
 
         public static void ParseElevateUpdaterArguments(params string[] args)
         {
-            rootCommand.AddArgument(new Argument<string>("elevateupdate", "Elevate updater to run as administrator") { HelpName = null });
-            AddUpdaterOptions();
+            Command elevateUpdater = new Command("elevateupdate", "Elevate updater to run as administrator");
+            rootCommand.AddCommand(elevateUpdater);
+            AddUpdaterOptions(elevateUpdater);
         }
 
-        public static void AddHi3CacheUpdaterOptions()
+        public static void AddHi3CacheUpdaterOptions(Command command)
         {
-            rootCommand.SetHandler(() =>
+            command.SetHandler(() =>
             {
             });
         }
 
-        public static void AddUpdaterOptions()
+        public static void AddUpdaterOptions(Command command)
         {
             Option<string> o_Input = new Option<string>(new string[] { "--input", "-i" }, "App path") { IsRequired = true };
             Option<AppReleaseChannel> o_Channel = new Option<AppReleaseChannel>(new string[] { "--channel", "-c" }, "App release channel") { IsRequired = true }.FromAmong();
-            rootCommand.AddOption(o_Input);
-            rootCommand.AddOption(o_Channel);
-            rootCommand.Handler = CommandHandler.Create((string Input, AppReleaseChannel ReleaseChannel) =>
+            command.AddOption(o_Input);
+            command.AddOption(o_Channel);
+            command.Handler = CommandHandler.Create((string Input, AppReleaseChannel Channel) =>
             {
                 m_arguments.Updater = new ArgumentUpdater
                 {
                     AppPath = Input,
-                    UpdateChannel = ReleaseChannel
+                    UpdateChannel = Channel
                 };
             });
         }
@@ -123,37 +171,34 @@ namespace CollapseLauncher
 
         public static void ParseMigrateArguments(bool isBHI3L = false, params string[] args)
         {
+            Command migrate;
             if (!isBHI3L)
-                rootCommand.AddArgument(new Argument<string>("migrate", "Migrate Game from one installation to another location") { HelpName = null });
+                migrate = new Command("migrate", "Migrate Game from one installation to another location");
             else
-                rootCommand.AddArgument(new Argument<string>("migratebhi3l", "Migrate Game from BetterHi3Launcher to another location") { HelpName = null });
-            AddMigrateOptions(isBHI3L);
+                migrate = new Command("migratebhi3l", "Migrate Game from BetterHi3Launcher to another location");
+            AddMigrateOptions(isBHI3L, migrate);
+            rootCommand.AddCommand(migrate);
         }
 
         public static void ParseOOBEArguments(params string[] args)
         {
-            rootCommand.AddArgument(new Argument<string>("oobesetup", "Starts Collapse in OOBE mode, to simulate first-time setup") { HelpName = null });
+            rootCommand.AddCommand(new Command("oobesetup", "Starts Collapse in OOBE mode, to simulate first-time setup"));
         }
 
-        public static void ParseStartOnTrayArguments(params string[] args)
-        {
-            rootCommand.AddArgument(new Argument<string>("tray", "Start Collapse in system tray") { HelpName = null });
-        }
-
-        private static void AddMigrateOptions(bool isBHI3L)
+        private static void AddMigrateOptions(bool isBHI3L, Command command)
         {
             var inputOption = new Option<string>(new string[] { "--input", "-i" }, description: "Installation Source") { IsRequired = true };
             var outputOption = new Option<string>(new string[] { "--output", "-o" }, description: "Installation Target") { IsRequired = true };
             var rootCommand = new RootCommand();
-            rootCommand.AddOption(inputOption);
-            rootCommand.AddOption(outputOption);
+            command.AddOption(inputOption);
+            command.AddOption(outputOption);
             if (isBHI3L)
             {
                 var gameVerOption = new Option<string>(new string[] { "--gamever", "-g" }, description: "Game version string (Format: x.x.x)") { IsRequired = true };
                 var regLocOption = new Option<string>(new string[] { "--regloc", "-r" }, description: "Location of game registry for BetterHI3Launcher keys") { IsRequired = true };
-                rootCommand.AddOption(gameVerOption);
-                rootCommand.AddOption(regLocOption);
-                rootCommand.Handler = CommandHandler.Create(
+                command.AddOption(gameVerOption);
+                command.AddOption(regLocOption);
+                command.Handler = CommandHandler.Create(
                     (string Input, string Output, string GameVer, string RegLoc) =>
                     {
                         m_arguments.Migrate = new ArgumentMigrate
@@ -167,7 +212,7 @@ namespace CollapseLauncher
                     });
                 return;
             }
-            rootCommand.Handler = CommandHandler.Create(
+            command.Handler = CommandHandler.Create(
                 (string Input, string Output) =>
                 {
                     m_arguments.Migrate = new ArgumentMigrate
@@ -207,6 +252,45 @@ namespace CollapseLauncher
             var rootCommand = new RootCommand();
             rootCommand.AddCommand(command);
         }
+
+        private static void AddPublicCommands()
+        {
+            rootCommand.AddCommand(new Command("tray", "Start Collapse in system tray"));
+            AddOpenCommand();
+        }
+
+        private static void AddOpenCommand()
+        {
+            var gameOption = new Option<string>(new string[] { "--game", "-g" },
+                description: "Game number/name\n" +
+                             "e.g. 0 or \"Honkai Impact 3rd\""){ IsRequired = true };
+            var regionOption = new Option<string>(new string[] { "--region", "-r" }, 
+                description: "Region number/name\n" +
+                             "e.g. For Genshin Impact, 0 or \"Global\" would load the Global region for the game") { IsRequired = false };
+            var startGameOption = new Option<bool>(new string[] { "--play", "-p" }, description: "Start Game after loading the Game/Region") { IsRequired = false };
+            var command = new Command("open", "Open the Launcher in a specific Game and Region (if specified).\n" +
+                                "Note that game/regions provided will be ignored if invalid.\n" +
+                                "Quotes are required if the game/region name has spaces.");
+            command.AddOption(gameOption);
+            command.AddOption(regionOption);
+            command.AddOption(startGameOption);
+            command.Handler = CommandHandler.Create(
+                (string Game, string Region, bool Play) =>
+                {
+                    m_arguments.StartGame = new ArgumentStartGame
+                    {
+                        Game = Game,
+                        Region = Region,
+                        Play = Play
+                    };
+                });
+            rootCommand.AddCommand(command);
+        }
+
+        public static void ResetRootCommand()
+        {
+            rootCommand = new RootCommand();
+        }
     }
 
     public class Arguments
@@ -215,6 +299,7 @@ namespace CollapseLauncher
         public ArgumentReindexer Reindexer { get; set; }
         public ArgumentReindexer TakeOwnership { get; set; }
         public ArgumentMigrate Migrate { get; set; }
+        public ArgumentStartGame StartGame { get; set; }
     }
 
     public class ArgumentUpdater
@@ -237,5 +322,12 @@ namespace CollapseLauncher
         public string RegLoc { get; set; }
         public string KeyName { get; set; }
         public bool IsBHI3L { get; set; }
+    }
+
+    public class ArgumentStartGame
+    {
+        public string Game { get; set; }
+        public string Region { get; set; }
+        public bool Play { get; set; }
     }
 }

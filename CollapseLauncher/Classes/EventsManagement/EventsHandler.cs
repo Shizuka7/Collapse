@@ -1,20 +1,16 @@
-﻿using Hi3Helper;
-using Hi3Helper.Data;
-using Hi3Helper.Http;
-using Hi3Helper.Shared.ClassStruct;
+﻿using Hi3Helper.Shared.ClassStruct;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
-using Squirrel;
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Diagnostics;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Networking.Connectivity;
 using static CollapseLauncher.InnerLauncherConfig;
 using static Hi3Helper.Locale;
-using static Hi3Helper.Logger;
 using static Hi3Helper.Shared.Region.LauncherConfig;
 
 namespace CollapseLauncher
@@ -22,99 +18,64 @@ namespace CollapseLauncher
     #region LauncherUpdateRegion
     internal static class LauncherUpdateWatcher
     {
-        public static string UpdateChannelName;
+        
+    #pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
+        public static string               UpdateChannelName = "stable";
         public static AppUpdateVersionProp UpdateProperty;
-        private static LauncherUpdateInvoker invoker = new LauncherUpdateInvoker();
-        public static void GetStatus(LauncherUpdateProperty e) => invoker.GetStatus(e);
-        public static bool isUpdateCooldownActive;
+        public static bool                 isUpdateCooldownActive;
+    #pragma warning restore CS0649 // Field is never assigned to, and will always have its default value
+        
+        private static LauncherUpdateInvoker invoker = new();
+        public static void GetStatus(LauncherUpdateProperty e) => invoker!.GetStatus(e);
+        
         public static bool isMetered
         {
             get
             {
-                NetworkCostType currentNetCostType = NetworkInformation.GetInternetConnectionProfile()?.GetConnectionCost().NetworkCostType ?? NetworkCostType.Fixed;
-                return !(currentNetCostType == NetworkCostType.Unrestricted || currentNetCostType == NetworkCostType.Unknown);  
+                NetworkCostType currentNetCostType = NetworkInformation.GetInternetConnectionProfile()?.GetConnectionCost()?.NetworkCostType ?? NetworkCostType.Fixed;
+                return !(currentNetCostType == NetworkCostType.Unrestricted || currentNetCostType == NetworkCostType.Unknown);
             }
-        }
-
-        public static async void StartCheckUpdate(bool forceUpdate)
-        {
-            UpdateChannelName = IsPreview ? "preview" : "stable";
-            while (true)
-            {
-                if ((!(GetAppConfigValue("DontAskUpdate").ToBoolNullable() ?? true) || ForceInvokeUpdate) && !IsSkippingUpdateCheck)
-                {
-                    try
-                    {
-                        // Force disable cooldown when its being forcefully updated
-                        if (forceUpdate)
-                            isUpdateCooldownActive = false;
-                        // Stopping auto update when it was recently called. Workaround for update being called twice on metadata update.
-                        if (!isUpdateCooldownActive)
-                        {
-                            if (!isMetered || forceUpdate)
-                            {
-                                isUpdateCooldownActive = true;
-                                using (Updater updater = new Updater(UpdateChannelName))
-                                {
-                                    UpdateInfo info = await updater.StartCheck();
-                                    GameVersion RemoteVersion = new GameVersion(info.FutureReleaseEntry.Version.Version);
-
-                                    AppUpdateVersionProp miscMetadata = await GetUpdateMetadata();
-                                    UpdateProperty = new AppUpdateVersionProp { ver = RemoteVersion.VersionString, time = miscMetadata.time };
-
-                                    if (CompareVersion(AppCurrentVersion, RemoteVersion))
-                                        GetStatus(new LauncherUpdateProperty { IsUpdateAvailable = true, NewVersionName = RemoteVersion });
-                                    else
-                                        GetStatus(new LauncherUpdateProperty { IsUpdateAvailable = false, NewVersionName = RemoteVersion });
-                                }
-                                ForceInvokeUpdate = false;
-                            }
-                            else
-                            {
-                                LogWriteLine($"Current network state is metered or disconnected! Auto update is skipped.\r\n\tPlease check your connection or use `Check for Update` button in Settings menu to update.", LogType.Warning, true);
-                            }
-                            isUpdateCooldownActive = true;
-                        }
-                        else LogWriteLine("Update was recently invoked! Stopping auto update until it resets in 15 minutes", LogType.Error, true);
-                    }
-                    catch (Exception ex)
-                    {
-                        LogWriteLine($"Update check has failed! Will retry in 15 mins.\r\n{ex}", LogType.Error, true);
-                    }
-                }
-                // Delay for 15 to 60 minutes depending on metered
-                await Task.Delay((isMetered ? 3600 : 900) * 1000);
-                // Reset isUpdateRecentlyInvoked to release the lock
-                isUpdateCooldownActive = false;
-            }
-        }
-
-        private static async ValueTask<AppUpdateVersionProp> GetUpdateMetadata()
-        {
-            string relativePath = ConverterTool.CombineURLFromString(UpdateChannelName, "fileindex.json");
-            await using BridgedNetworkStream ms = await FallbackCDNUtil.TryGetCDNFallbackStream(relativePath, default);
-            return await ms.DeserializeAsync<AppUpdateVersionProp>(InternalAppJSONContext.Default);
-        }
-
-        public static bool CompareVersion(GameVersion? CurrentVer, GameVersion? ComparedVer)
-        {
-            if (CurrentVer == null || ComparedVer == null) return false;
-            return CurrentVer.Value.ToVersion() < ComparedVer.Value.ToVersion();
         }
     }
 
     public class AppUpdateVersionProp
     {
-        public string ver { get; set; }
-        public long time { get; set; }
-        public List<AppUpdateVersionFileProp> f { get; set; }
+        [JsonPropertyName("f")]
+        public List<AppUpdateVersionFileProp> FileList { get; set; }
+
+        [JsonPropertyName("forceUpdate")]
+        public bool IsForceUpdate { get; set; }
+
+        [JsonIgnore]
+        public DateTime? TimeLocalTime
+        {
+            get => DateTimeOffset.FromUnixTimeSeconds(UnixTime).DateTime.ToLocalTime();
+        }
+
+        [JsonPropertyName("time")]
+        public long UnixTime { get; set; }
+
+        [JsonIgnore]
+        public GameVersion? Version
+        {
+            get
+            {
+                if (!GameVersion.TryParse(VersionString, out GameVersion? result))
+                    return null;
+
+                return result;
+            }
+        }
+
+        [JsonPropertyName("ver")]
+        public string VersionString { get; set; }
     }
 
     public class AppUpdateVersionFileProp
     {
-        public string p { get; set; }
-        public string crc { get; set; }
-        public long s { get; set; }
+        [JsonPropertyName("p")] public string FilePath { get; set; }
+        [JsonPropertyName("crc")] public string FileMD5Hash { get; set; }
+        [JsonPropertyName("s")] public long FileSize { get; set; }
     }
 
     internal class LauncherUpdateInvoker
@@ -127,14 +88,25 @@ namespace CollapseLauncher
     {
         public bool IsUpdateAvailable { get; set; }
         public GameVersion NewVersionName { get; set; }
-        public bool QuitFromUpdateMenu { get; set; } = false;
+        public bool QuitFromUpdateMenu { get; set; }
     }
     #endregion
     #region ThemeChangeRegion
     internal static class ThemeChanger
     {
         static ThemeChangerInvoker invoker = new ThemeChangerInvoker();
-        public static void ChangeTheme(ElementTheme e) => invoker.ChangeTheme(e);
+        public static void ChangeTheme(ElementTheme e)
+        {
+            CurrentAppTheme = e switch
+            {
+                ElementTheme.Light => AppThemeMode.Light,
+                ElementTheme.Default => AppThemeMode.Default,
+                _ => AppThemeMode.Dark
+            };
+
+            SetAppConfigValue("ThemeMode", CurrentAppTheme.ToString());
+            invoker!.ChangeTheme(e);
+        }
     }
 
     internal class ThemeChangerInvoker
@@ -146,11 +118,12 @@ namespace CollapseLauncher
     internal class ThemeProperty
     {
         internal ThemeProperty(ElementTheme e) => Theme = e;
+        // ReSharper disable once UnusedAutoPropertyAccessor.Global
         public ElementTheme Theme { get; private set; }
     }
     #endregion
     #region ErrorSenderRegion
-    public enum ErrorType { Unhandled, GameError, Connection }
+    public enum ErrorType { Unhandled, GameError, Connection, Warning }
 
     internal static class ErrorSender
     {
@@ -159,29 +132,36 @@ namespace CollapseLauncher
         public static ErrorType ExceptionType;
         public static string ExceptionTitle;
         public static string ExceptionSubtitle;
-        public static void SendException(Exception e, ErrorType eT = ErrorType.Unhandled) => invoker.SendException(e, eT);
+        public static void SendException(Exception e, ErrorType eT = ErrorType.Unhandled) => invoker!.SendException(e, eT);
+        public static void SendWarning(Exception e, ErrorType eT = ErrorType.Warning) =>
+            invoker!.SendException(e, eT);
         public static void SendExceptionWithoutPage(Exception e, ErrorType eT = ErrorType.Unhandled)
         {
-            ExceptionContent = e.ToString();
+            ExceptionContent = e!.ToString();
             ExceptionType = eT;
             SetPageTitle(eT);
         }
 
         public static void SetPageTitle(ErrorType errorType)
         {
+            var _locUnhandledException = Lang!._UnhandledExceptionPage!;
             switch (errorType)
             {
                 case ErrorType.Unhandled:
-                    ExceptionTitle = Lang._UnhandledExceptionPage.UnhandledTitle1;
-                    ExceptionSubtitle = Lang._UnhandledExceptionPage.UnhandledTitle1;
+                    ExceptionTitle    = _locUnhandledException.UnhandledTitle1;
+                    ExceptionSubtitle = _locUnhandledException.UnhandledTitle1;
                     break;
                 case ErrorType.Connection:
-                    ExceptionTitle = Lang._UnhandledExceptionPage.UnhandledTitle2;
-                    ExceptionSubtitle = Lang._UnhandledExceptionPage.UnhandledSubtitle2;
+                    ExceptionTitle    = _locUnhandledException.UnhandledTitle2;
+                    ExceptionSubtitle = _locUnhandledException.UnhandledSubtitle2;
                     break;
                 case ErrorType.GameError:
-                    ExceptionTitle = Lang._UnhandledExceptionPage.UnhandledTitle3;
-                    ExceptionSubtitle = Lang._UnhandledExceptionPage.UnhandledSubtitle3;
+                    ExceptionTitle    = _locUnhandledException.UnhandledTitle3;
+                    ExceptionSubtitle = _locUnhandledException.UnhandledSubtitle3;
+                    break;
+                case ErrorType.Warning:
+                    ExceptionTitle    = _locUnhandledException.UnhandledTitle4;
+                    ExceptionSubtitle = _locUnhandledException.UnhandledSubtitle4;
                     break;
             }
         }
@@ -197,10 +177,10 @@ namespace CollapseLauncher
     {
         internal ErrorProperties(Exception e, ErrorType errorType)
         {
-            Exception = e;
-            ExceptionString = e.ToString();
+            Exception                    = e;
+            ExceptionString              = e?.ToString() ?? String.Empty;
             ErrorSender.ExceptionContent = ExceptionString;
-            ErrorSender.ExceptionType = errorType;
+            ErrorSender.ExceptionType    = errorType;
             ErrorSender.SetPageTitle(errorType);
         }
         public Exception Exception { get; private set; }
@@ -217,13 +197,13 @@ namespace CollapseLauncher
         public static void ChangeWindowFrame(Type e, NavigationTransitionInfo eT)
         {
             currentWindow = e;
-            invoker.ChangeWindowFrame(e, eT);
+            invoker!.ChangeWindowFrame(e, eT);
         }
         public static void ChangeMainFrame(Type e) => ChangeMainFrame(e, new DrillInNavigationTransitionInfo());
         public static void ChangeMainFrame(Type e, NavigationTransitionInfo eT)
         {
             currentPage = e;
-            invoker.ChangeMainFrame(e, eT);
+            invoker!.ChangeMainFrame(e, eT);
         }
 
         public static void ReloadCurrentWindowFrame() => ChangeWindowFrame(currentWindow);
@@ -253,8 +233,8 @@ namespace CollapseLauncher
     internal static class NotificationSender
     {
         static NotificationInvoker invoker = new NotificationInvoker();
-        public static void SendNotification(NotificationInvokerProp e) => invoker.SendNotification(e);
-        public static void SendCustomNotification(int tagID, InfoBar infoBarUI) => invoker.SendNotification(new NotificationInvokerProp
+        public static void SendNotification(NotificationInvokerProp e) => invoker!.SendNotification(e);
+        public static void SendCustomNotification(int tagID, InfoBar infoBarUI) => invoker!.SendNotification(new NotificationInvokerProp
         {
             IsCustomNotif = true,
             CustomNotifAction = NotificationCustomAction.Add,
@@ -264,7 +244,7 @@ namespace CollapseLauncher
             },
             OtherContent = infoBarUI
         });
-        public static void RemoveCustomNotification(int tagID) => invoker.SendNotification(new NotificationInvokerProp
+        public static void RemoveCustomNotification(int tagID) => invoker!.SendNotification(new NotificationInvokerProp
         {
             IsCustomNotif = true,
             CustomNotifAction = NotificationCustomAction.Remove,
@@ -284,11 +264,11 @@ namespace CollapseLauncher
     public enum NotificationCustomAction { Add, Remove }
     public class NotificationInvokerProp
     {
-        public TypedEventHandler<InfoBar, object> CloseAction { get; set; } = null;
-        public UIElement OtherContent { get; set; } = null;
+        public TypedEventHandler<InfoBar, object> CloseAction { get; set; }
+        public FrameworkElement OtherContent { get; set; }
         public NotificationProp Notification { get; set; }
         public bool IsAppNotif { get; set; } = true;
-        public bool IsCustomNotif { get; set; } = false;
+        public bool IsCustomNotif { get; set; }
         public NotificationCustomAction CustomNotifAction { get; set; }
 
     }
@@ -296,10 +276,10 @@ namespace CollapseLauncher
     #region BackgroundRegion
     internal static class BackgroundImgChanger
     {
-        static BackgroundImgChangerInvoker invoker = new BackgroundImgChangerInvoker();
-        public static async Task WaitForBackgroundToLoad() => await invoker.WaitForBackgroundToLoad();
-        public static void ChangeBackground(string ImgPath, bool IsCustom = true) => invoker.ChangeBackground(ImgPath, IsCustom);
-        public static void ToggleBackground(bool Hide) => invoker.ToggleBackground(Hide);
+        static BackgroundImgChangerInvoker invoker = new();
+        public static async Task WaitForBackgroundToLoad() => await invoker!.WaitForBackgroundToLoad();
+        public static void ChangeBackground(string ImgPath, bool IsCustom = true, bool IsForceRecreateCache = false, bool IsRequestInit = false) => invoker!.ChangeBackground(ImgPath, IsCustom, IsForceRecreateCache, IsRequestInit);
+        public static void ToggleBackground(bool Hide) => invoker!.ToggleBackground(Hide);
     }
 
     internal class BackgroundImgChangerInvoker
@@ -307,20 +287,24 @@ namespace CollapseLauncher
         public static event EventHandler<BackgroundImgProperty> ImgEvent;
         public static event EventHandler<bool> IsImageHide;
         BackgroundImgProperty property;
-        public async Task WaitForBackgroundToLoad() => await Task.Run(() => { while (!property.IsImageLoaded) { } });
-        public void ChangeBackground(string ImgPath, bool IsCustom) => ImgEvent?.Invoke(this, property = new BackgroundImgProperty(ImgPath, IsCustom));
+        public async Task WaitForBackgroundToLoad() => await Task.Run(() => { while (!property!.IsImageLoaded) { } });
+        public void ChangeBackground(string ImgPath, bool IsCustom, bool IsForceRecreateCache = false, bool IsRequestInit = false) => ImgEvent?.Invoke(this, property = new BackgroundImgProperty(ImgPath, IsCustom, IsForceRecreateCache, IsRequestInit));
         public void ToggleBackground(bool Hide) => IsImageHide?.Invoke(this, Hide);
     }
 
     internal class BackgroundImgProperty
     {
-        internal BackgroundImgProperty(string ImgPath, bool IsCustom)
+        internal BackgroundImgProperty(string ImgPath, bool IsCustom, bool IsForceRecreateCache, bool IsRequestInit)
         {
-            this.ImgPath = ImgPath;
-            this.IsCustom = IsCustom;
+            this.ImgPath              = ImgPath;
+            this.IsCustom             = IsCustom;
+            this.IsForceRecreateCache = IsForceRecreateCache;
+            this.IsRequestInit        = IsRequestInit;
         }
 
-        public bool IsImageLoaded { get; set; } = false;
+        public bool IsRequestInit { get; set; }
+        public bool IsForceRecreateCache { get; set; }
+        public bool IsImageLoaded { get; set; }
         public string ImgPath { get; private set; }
         public bool IsCustom { get; private set; }
     }
@@ -329,7 +313,22 @@ namespace CollapseLauncher
     internal static class SpawnWebView2
     {
         static SpawnWebView2Invoker invoker = new SpawnWebView2Invoker();
-        public static void SpawnWebView2Window(string URL) => invoker.SpawnWebView2Window(URL);
+        public static void SpawnWebView2Window(string URL, UIElement parentUI)
+        {
+            if (GetAppConfigValue("UseExternalBrowser").ToBool())
+            {
+                if (string.IsNullOrEmpty(URL)) return;
+                parentUI!.DispatcherQueue!.TryEnqueue(() =>
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = URL,
+                        UseShellExecute = true,
+                    });
+                });
+            }
+            else invoker!.SpawnWebView2Window(URL);
+        }
     }
 
     internal class SpawnWebView2Invoker
@@ -349,7 +348,7 @@ namespace CollapseLauncher
     internal static class ShowLoadingPage
     {
         static ShowLoadingPageInvoker invoker = new ShowLoadingPageInvoker();
-        public static void ShowLoading(string Title, string Subtitle, bool Hide = false) => invoker.ShowLoading(Hide, Title, Subtitle);
+        public static void ShowLoading(string Title, string Subtitle, bool Hide = false) => invoker!.ShowLoading(Hide, Title, Subtitle);
     }
 
     internal class ShowLoadingPageInvoker
@@ -381,7 +380,7 @@ namespace CollapseLauncher
     internal static class ChangeTitleDragArea
     {
         static ChangeTitleDragAreaInvoker invoker = new ChangeTitleDragAreaInvoker();
-        public static void Change(DragAreaTemplate Template) => invoker.Change(Template);
+        public static void Change(DragAreaTemplate Template) => invoker!.Change(Template);
     }
 
     internal class ChangeTitleDragAreaInvoker
@@ -404,14 +403,14 @@ namespace CollapseLauncher
     internal static class UpdateBindings
     {
         static UpdateBindingsInvoker invoker = new UpdateBindingsInvoker();
-        public static void Update() => invoker.Update();
+        public static void Update() => invoker!.Update();
     }
 
     internal class UpdateBindingsInvoker
     {
-        private static EventArgs DummyArgs = new EventArgs();
+        private static EventArgs DummyArgs = new();
         public static event EventHandler UpdateEvents;
-        public void Update() => UpdateEvents?.Invoke(this, DummyArgs);
+        public void Update() => UpdateEvents?.Invoke(this, DummyArgs!);
     }
     #endregion
 }

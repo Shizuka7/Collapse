@@ -4,6 +4,21 @@
   "Author": "neon-nyan, bagusnl",
 
   "_StartupPage": {
+    "SelectLang": "Pilih bahasa",
+    "SelectLangDesc": "Pilih bahasa yang ingin kamu gunakan!",
+    "SelectWindowSize": "Pilih ukuran jendela yang kamu inginkan",
+    "SelectCDN": "Pilih CDN yang kamu inginkan",
+    "CDNHelpTitle_1": "Apa itu CDN?",
+    "CDNHelpTitle_2": "singkatan dari",
+    "CDNHelpTitle_3": "Content Delivery Network (Jaringan Pengiriman Konten)",
+    "CDNHelpTitle_4": "​",
+    "CDNHelpDetail_1": "​",
+    "CDNHelpDetail_2": "CDN",
+    "CDNHelpDetail_3": "adalah sistem yang digunakan untuk membuat berkas-berkas launcher tersedia untuk lebih banyak pengguna secara cepat dan efisien.",
+    "CDNHelpDetail_4": "Collapse memilih GitHub sebagai penyedia bawaan.",
+    "CDNsAvailable": "CDN yang tersedia:",
+    "SplashArt_1": "Gambar merupakan properti dari",
+    "SplashArt_2": "miHoYo / HoYoverse",
     "ChooseFolderBtn": "Pilih Folder",
     "ChooseFolderDialogCancel": "Batal",
     "ChooseFolderDialogPrimary": "Iya dong",
@@ -23,6 +38,7 @@
     "Pg2ComboBoxRegion": "Pilih Region",
     "Pg2NextBtn": "Selesai - Masuk ke Launcher",
     "Pg2PrevBtn": "Sebelumnya - Memilih Folder",
+    "Pg2PrevBtnNew": "Kembali - Konfigurasi Launcher",
     "Pg2Subtitle1_1": "Hanya satu langkah lagi untuk memainkan game-mu dari",
     "Pg2Subtitle1_2": "Collapse Launcher.",
     "Pg2Subtitle1_3": "",
@@ -38,8 +54,8 @@
     "Subtitle4_1": "Untuk memulai, klik tombol",
     "Subtitle4_2": "Pilih Folder",
     "Subtitle4_3": "untuk memilih lokasi penyimpanan data launcher.",
-    "Title1": "Selamat Datang",
-    "Title2": "di Collapse Launcher"
+    "Title1": "Selamat Datang di",
+    "Title2": "Collapse Launcher"
   },
 
   "_DisconnectedPage": {
@@ -59,6 +75,8 @@
     "UnhandledSubtitle2": "Oops, sepertinya koneksi internetmu terputus. apakah betul?",
     "UnhandledTitle3": "Game Crash",
     "UnhandledSubtitle3": "Telah terjadi crash pada game dengan error sebagai berikut:",
+    "UnhandledTitle4": "Peringatan",
+    "UnhandledSubtitle4": "Hal ini bukan masalah penting, namun kami pikir kamu perlu tahu ini:\r\nAkibat miHoYo A/B testing, Collapse tidak dapat memproses pengaturan ini: App_Settings_h2319593470.\r\nKami mohon maaf atas ketidaknyamanannya.",
     "CopyClipboardBtn1": "Salin Semua ke Clipboard",
     "CopyClipboardBtn2": "Telah Tersalin ke Clipboard!",
     "GoBackPageBtn1": "Kembali ke Halaman Sebelumnya"
@@ -78,8 +96,12 @@
     "NavCtrlTitleSettings": "Pengaturan App",
     "NotifNeverAsk": "Jangan munculkan ini lagi",
     "NotifNoNewNotifs": "Tidak ada notifikasi baru",
+    "NotifClearAll": "Hapus semua notifikasi",
     "NavigationMenu": "Menu",
-    "NavigationUtilities":  "Perkakas"
+    "NavigationUtilities": "Perkakas",
+    "Initializing": "Mempersiapkan",
+    "LoadingLauncherMetadata": "Memuat Metadata Launcher",
+    "LoadingGameConfiguration": "Memuat Konfigurasi Game"
   },
 
   "_HomePage": {
@@ -87,7 +109,7 @@
     "PreloadTitle": "Pra-unduh Telah Tersedia!",
     "PreloadNotifTitle": "Pra-unduh untuk v{0} sudah tersedia!",
     "PreloadNotifDeltaDetectTitle": "Pre-unduh untuk v{0} dengan format Delta-Patch terdeteksi!",
-    "PreloadNotifSubtitle": "Pra-unduh untuk v{0} sudah tersedia! Kamu bisa mengunduhnya sekaligus bermain game secara bersamaan.",
+    "PreloadNotifSubtitle": "Klik \"Download Game\" untuk memulai mengunduh di background.",
     "PreloadNotifDeltaDetectSubtitle": "Kamu sudah mengunduh pra-unduh dalam format Delta-Patch. Format pra-unduh ini akan digunakan untuk mengupdate game-mu nanti.",
     "PreloadNotifCompleteTitle": "Praunduh sudah terunduh!",
     "PreloadNotifCompleteSubtitle": "Kamu sudah mengunduh pra-unduh untuk v{0}!",
@@ -106,6 +128,7 @@
     "PauseCancelDownloadBtn": "Jeda/Batalkan Unduhan",
     "PauseCancelBtn": "Jeda/Batalkan",
     "DownloadBtn": "Unduh Pra-unduh",
+
     "GameSettingsBtn": "Pengaturan Cepat",
     "GameSettings_Panel1": "Pengaturan Cepat",
     "GameSettings_Panel1OpenGameFolder": "Buka Folder Game",
@@ -115,28 +138,36 @@
     "GameSettings_Panel2RepairGame": "Perbaiki Game",
     "GameSettings_Panel2UninstallGame": "Hapus Game",
     "GameSettings_Panel2ConvertVersion": "Ubah Versi",
+    "GameSettings_Panel2MoveGameLocationGame": "Pindah Lokasi Game",
     "GameSettings_Panel2StopGame": "Tutup Paksa Game",
     "GameSettings_Panel3": "Penyesuaian Argumen Pemulaian",
     "GameSettings_Panel4": "Lainnya",
     "GameSettings_Panel4ShowEventsPanel": "Munculkan Panel Event",
     "GameSettings_Panel4ShowSocialMediaPanel": "Munculkan Panel Sosmed",
+    "GameSettings_Panel4CreateShortcutBtn": "Buat pintasan",
+    "GameSettings_Panel4AddToSteamBtn": "Tambahkan ke Steam",
+
     "GamePlaytime_Panel1": "Ubah Waktu Main",
     "GamePlaytime_Idle_Panel1Hours": "Jam",
     "GamePlaytime_Idle_Panel1Minutes": "Menit",
     "GamePlaytime_Idle_ResetBtn": "Atur Ulang",
     "GamePlaytime_Idle_ChangeBtn": "Ubah",
-    "GamePlaytime_Idle_InvalidTimeBlock": "Nilai yang dimasukkan tidak benar.",
     "GamePlaytime_Running_Info1": "Game ini sedang berjalan, maka dari itu waktu main tidak dapat diubah.",
     "GamePlaytime_Running_Info2": "Perlu diketahui bahwa dengan menutup Collapse akan memberhentikan tracking dari waktu main (untuk disimpan pada saat dimainkan) dan hanya sesi yang dijalankan dari Collapse saja yang dapat ditrack.",
+    "GamePlaytime_Display": "{0}j {1}m",
+    "GamePlaytime_ToolTipDisplay": "Terakhir dibuka pada {0:00}/{1:00}/{2:0000} pukul {3:00}:{4:00}",
+
     "PostPanel_Events": "Event",
-    "PostPanel_Notices": "Pemberitahuan",
-    "PostPanel_Info": "Informasi",
+    "PostPanel_Notices": "Pengumuman",
+    "PostPanel_Info": "Info",
     "PostPanel_NoNews": "Hah?\nNggak ada berita?",
 
     "CommunityToolsBtn": "Alat Komunitas",
     "CommunityToolsBtn_OfficialText": "Alat Resmi",
     "CommunityToolsBtn_CommunityText": "Alat Komunitas",
-    "CommunityToolsBtn_OpenExecutableAppDialogTitle": "Pilih Executable Program: {0}"
+    "CommunityToolsBtn_OpenExecutableAppDialogTitle": "Pilih Executable Program: {0}",
+
+    "CreateShortcut_FolderPicker": "Pilih tempat untuk menyimpan pintasan"
   },
 
   "_GameRepairPage": {
@@ -160,7 +191,9 @@
     "Status11": "Menunggu proses perbaikan dimulai...",
     "Status12": "Memperbarui Audio: {0}",
     "Status13": "Memperbarui Blok: {0}",
-    "StatusNone": "-",
+    "Status14": "Memeriksa ketersediaan asset CG: {0}",
+    "Status15": "Memeriksa ketersediaan asset Audio: {0}",
+    "StatusNone": "Tidak diketahui",
     "PerProgressTitle1": "Progres Per File",
     "PerProgressSubtitle1": "Menunggu...",
     "PerProgressSubtitle2": "Progres: {0}/{1}",
@@ -190,13 +223,14 @@
     "ListCol6": "R.CRC",
     "ListCol7": "Status",
     "Status1": "Klik \"Periksa Cepat\" atau \"Periksa Penuh\" untuk memeriksa pembaruan cache",
+    "Status2": "Mencoba untuk memeriksa ketersediaan asset cache \"{0}\": {1}",
     "CachesStatusHeader1": "Total Progres",
     "CachesStatusCancelled": "Proses telah dibatalkan!",
     "CachesStatusFetchingType": "Memuat Tipe Cache: {0}",
     "CachesStatusNeedUpdate": "{0} cache (dengan ukuran: {1}) butuh diperbarui. Klik \"Perbarui\" untuk memperbarui.",
     "CachesStatusUpToDate": "Cache sudah terbaru!",
     "CachesStatusChecking": "Memeriksa {0}: {1}",
-    "CachesTotalStatusNone": "Kosong",
+    "CachesTotalStatusNone": "Tidak diketahui",
     "CachesTotalStatusChecking": "Memproses: {0}/{1}",
     "CachesBtn1": "Perbarui",
     "CachesBtn2": "Periksa",
@@ -222,6 +256,8 @@
     "Graphics_Borderless": "Gunakan Mode Borderless Window",
     "Graphics_Fullscreen": "Layar Penuh",
     "Graphics_ExclusiveFullscreen": "Gunakan Layar Penuh Eksklusif",
+    "Graphics_ResizableWindow": "Gunakan Jendela Fleksibel",
+    "Graphics_ResizableWindowTooltip": "Pengaturan ini hanya dapat digunakan saat Layar Penuh dimatikan.",
     "Graphics_ResSelectPlaceholder": "Pilih",
     "Graphics_ResCustom": "Gunakan Resolusi Lainnya",
     "Graphics_ResCustomW": "P",
@@ -255,19 +291,30 @@
     "Graphics_APHO2AO": "Ambient Occlusion",
     "Graphics_APHO2LOD": "Level Of Detail",
 
+    "Graphics_ParticleQuality": "Kualitas Partikel",
+    "Graphics_LightingQuality": "Kualitas Pencahayaan",
+    "Graphics_PostFXQuality": "Kualitas Efek Visual",
+    "Graphics_AAMode": "Mode Anti-Aliasing",
+    "Graphics_CharacterQuality": "Kualitas Karakter",
+    "Graphics_WeatherQuality": "Kualitas Efek Cuaca",
+
+    "Graphics_Legacy_Title": "Pengaturan Lama",
+    "Graphics_Legacy_Subtitle": "Pengaturan ini sudah tidak tersedia di dalam game dan kemungkinan ttidak akan mempengaruhi apapun.",
+
     "SpecDisabled": "Mati",
     "SpecLow": "Rendah",
     "SpecMedium": "Sedang",
     "SpecHigh": "Tinggi",
     "SpecVeryHigh": "S. Tinggi",
     "SpecMaximum": "Maksimum",
+    "SpecUltra": "Terbaik",
 
     "Audio_Title": "Pengaturan Suara",
     "Audio_Master": "Volume Utama",
     "Audio_BGM": "Volume BGM",
     "Audio_SFX": "Volume Efek Suara",
     "Audio_VOLang": "Bahasa Pengisi Suara",
-    "Audio_VOLang1": "Tiongkok (RRC)",
+    "Audio_VOLang1": "Mandarin (RRC)",
     "Audio_VOLang2": "Jepang",
     "Audio_VODefault": " [Bawaan]",
     "Audio_VO": "Volume Pengisi Suara",
@@ -297,13 +344,26 @@
     "OverlayFirstTimeTitle": "Kamu belum pernah memainkan game ini!",
     "OverlayFirstTimeSubtitle": "Mohon jalankan game ini untuk pertama kalinya terlebih dahulu dan kembali lagi untuk menggunakan fitur ini.",
 
-    "CustomArgs_Title": "Penyesuaian Argumen Pemulaian",
+    "CustomArgs_Title": "Penyesuaian Argumen Pemulaian (Tingkat Lanjut)",
     "CustomArgs_Subtitle": "Argumen Pemulaian",
     "CustomArgs_Footer1": "Untuk informasi lebih lanjut mengenai Argumen Pemulaian, silahkan cek dokumentasi",
     "CustomArgs_Footer2": "\"Unity Standalone Command-line\"",
     "CustomArgs_Footer3": "berikut.",
 
-    "GameBoost": "Boost Game Priority [Experimental]"
+    "GameBoost": "Boost Game Priority [Experimental]",
+    "MobileLayout": "Gunakan Layout Mobile",
+
+    "Advanced_Title": "Pengaturan Tingkat Lanjut",
+    "Advanced_Subtitle1": "Team Collapse Launcher",
+    "Advanced_Subtitle2": "TIDAK BERTANGGUNG JAWAB",
+    "Advanced_Subtitle3": "atas apapun yang terjadi dalam game, akun, mamupun sistem saat setting ini digunakan! Gunakan dengan teliti!",
+    "Advanced_GLC_WarningAdmin": "PERINGATAN: Command yang dijalankan akan menggunakan akses sebagai Administrator!",
+    "Advanced_GLC_PreLaunch_Title": "Command Pre-Launch",
+    "Advanced_GLC_PreLaunch_Subtitle": "Command yang akan dijalankan sebelum game dijalankan.",
+    "Advanced_GLC_PreLaunch_Exit": "Paksa matikan process yang dijalankan saat game sudah berhenti/ditutup.",
+    "Advanced_GLC_PreLaunch_Delay": "Jeda Pemulaian Game (milidetik)",
+    "Advanced_GLC_PostExit_Title": "Command Post-Exit",
+    "Advanced_GLC_PostExit_Subtitle": "Command yang akan dijalankan setelah game ditutup/berhenti."
   },
 
   "_SettingsPage": {
@@ -315,6 +375,7 @@
     "Debug_MultipleInstance": "Perbolehkan Multiple Instance",
 
     "ChangeRegionWarning_Toggle": "Tampilkan Peringatan Penggantian Region",
+    "ChangeRegionInstant_Toggle": "Mengubah Pilihan Region secara Instant",
     "ChangeRegionWarning_Warning": "*Anda perlu memulai ulang launcher untuk menerapkan setelan ini.",
 
     "Language": "Bahasa",
@@ -335,7 +396,7 @@
 
     "AppBG": "Latar Belakang",
     "AppBG_Checkbox": "Gunakan Latar Belakang Lainnya",
-    "AppBG_Note": "Catatan: Gambar harus berformat .png, .jpg, .tiff atau .bmp dan berukuran kurang dari 4096x4096",
+    "AppBG_Note": "Format yang didukung:\r\nGambar: {0}\r\nVideo: {1}",
 
     "AppThreads": "Utas Aplikasi",
     "AppThreads_Download": "Utas Unduhan",
@@ -347,9 +408,22 @@
     "AppThreads_Help5": "Utas ini akan bertanggungjawab untuk menangani utas-utas untuk proses extract/verifikasi pada saat memasang/memulihkan game.",
     "AppThreads_Help6": "Catatan: Pengaturan ini tidak lagi berpengaruh pada saat memasang Honkai Impact 3.",
 
+    "AppThreads_Attention": "Perhatian",
+    "AppThreads_Attention1": "Sebelum kamu mengubah pengaturan",
+    "AppThreads_Attention2": "dan apabila kamu masih memiliki download yang belum selesai, mohon untuk",
+    "AppThreads_Attention3": "TIDAK MENGUBAH",
+    "AppThreads_Attention4": "nilai dari pengaturan dikarenakan hal ini akan membuat proses download kamu",
+    "AppThreads_Attention5": "TERULANG DARI AWAL",
+    "AppThreads_Attention6": "dikarenakan jumlah sesi yang dibutuhkan untuk download tidak sama.",
+
     "DiscordRPC": "Discord Rich Presence",
     "DiscordRPC_Toggle": "Perlihatkan Discord Presence",
     "DiscordRPC_GameStatusToggle": "Munculkan game yang dimainkan pada status Discord",
+    "DiscordRPC_IdleStatusToggle": "Tampilkan RPC saat idle",
+
+    "VideoBackground": "Pengaturan Latar Belakang Video",
+    "VideoBackground_IsEnableAudio": "Nyalakan Audio",
+    "VideoBackground_AudioVolume": "Volume Audio",
 
     "Update": "Periksa Pembaruan",
     "Update_CurVer": "Versi saat ini:",
@@ -375,10 +449,12 @@
     "HelpLocalizeBtn": "Bantu Kami Menerjemahkan Collapse!",
 
     "About": "Tentang",
-    "About_Copyright1": "© 2022-2023",
-    "About_Copyright2": " neon-nyan, Cry0, bagusnl & Kuro",
+    "About_Copyright1": "© 2022-2024",
+    "About_Copyright2": " neon-nyan, Cry0, bagusnl,\r\n shatyuka & gablm",
     "About_Copyright3": "Di bawah lisensi",
     "About_Copyright4": ". Hak cipta dilindungi.",
+    
+    "LicenseType": "Lisensi MIT",
 
     "Disclaimer": "Sanggahan",
     "Disclaimer1": "Aplikasi ini tidak berkaitan dengan",
@@ -393,6 +469,7 @@
 
     "EnableAcrylicEffect": "Gunakan Efek Blur Akrilik",
     "EnableDownloadChunksMerging": "Gabung Potongan Unduhan Package",
+    "UseExternalBrowser": "Selalu Gunakan Browser Eksternal",
 
     "LowerCollapsePrioOnGameLaunch": "Turunkan Prioritas Collapse saat Game Berjalan",
     "LowerCollapsePrioOnGameLaunch_Tooltip": "Hentikan tayangan slide gambar di halaman utama dan menurunkan prioritas Collapse ke Dibawah Normal ",
@@ -408,10 +485,20 @@
     "AppBehavior_PostGameLaunch_Nothing": "Tidak melakukan apapun",
     "AppBehavior_MinimizeToTray": "Kecilkan ke Tray",
     "AppBehavior_LaunchOnStartup": "Jalankan Collapse secara otomatis saat komputer menyala",
-    "AppBehavior_StartupToTray": "Sembunyikan jendela Collapse setelah dijalankan secara otomatis"
+    "AppBehavior_StartupToTray": "Sembunyikan jendela Collapse setelah dijalankan secara otomatis",
+
+    "Waifu2X_Toggle": "Gunakan Waifu2X [Eksperimental]",
+    "Waifu2X_Help": "Gunakan Waifu2X untuk memperbesar gambar latar belakang.\nKetika dihidupkan, kualitas gambar akan ditingkatkan secara signifikan, namun gambar akan dimuat sedikit lebih lama saat gambar dimuat untuk pertama kalinya.",
+    "Waifu2X_Help2": "Hanya tersedia untuk gambar saja!",
+    "Waifu2X_Warning_CpuMode": "PERINGATAN: Kamu tidak memiliki GPU yang mendukung API Vulkan dan CPU kamu akan digunakan untuk memproses gambar. Proses pemrosesan akan menjadi lebih lama dari yang seharusnya.",
+    "Waifu2X_Warning_D3DMappingLayers": "PERINGATAN: Kamu memiliki \"OpenCL™, OpenGL®, dan Vulkan® Compatibility Pack\" yang terpasang di komputermu. Dikabarkan bahwa program tersebut tidak kompatibel dengan Vulkan Loader pada fitur ini dan akan menyebabkan Crash pada beberapa GPU. Silahkan hapus program tersebut untuk menggunakan GPU pada fitur ini.",
+    "Waifu2X_Error_Loader": "ERROR: Gagal dalam mempersiapkan Vulkan API. Pastikan bahwa kamu memiliki GPU yang mendukung Vulkan API dan memiliki driver yang sesuai.",
+    "Waifu2X_Error_Output": "ERROR: Gagal saat menjalankan Self-test pada Waifu2X, gambar test mengeluarkan output yang kosong."
   },
 
   "_Misc": {
+    "SizePrefixes1000U": "B|KB|MB|GB|TB|PB|EB|ZB|YB",
+
     "UpdateCompleteTitle": "Pembaruan Selesai!",
     "UpdateCompleteSubtitle": "Launchermu telah diperbarui ke {0}! (Kanal Rilis: {1})",
     "FeatureUnavailableTitle": "Fitur ini tidak tersedia untuk saat ini",
@@ -429,6 +516,7 @@
     "Close": "Tutup",
     "UseCurrentDir": "Pakai lokasi saat ini",
     "UseDefaultDir": "Pakai lokasi bawaan",
+    "MoveToDifferentDir": "Pindah ke direktori lain",
     "LocateDir": "Arahkan direktori",
     "Okay": "Oke",
     "OkaySad": "Oke deh... ;-;)",
@@ -446,8 +534,10 @@
     "YesRelocate": "Ya, Lanjutkan",
     "YesMigrateIt": "Ya, Pindahkan",
     "YesConvertIt": "Ya, Ubahkan",
-    "YesIHaveBeefyPC": "Ya, Aku punya PC gahar!",
+    "YesImReallySure": "Iya, Aku yakin banget!",
+    "YesIHaveBeefyPC": "Ya, Aku punya PC gahar! ᕦ(ò_ó)ᕤ",
     "YesChangeLocation": "Ya, Ubah lokasi",
+    "YesContinue": "Ya, Lanjutkan",
 
     "No": "Tidak",
     "NoStartFromBeginning": "Tidak, Dari awal",
@@ -456,10 +546,14 @@
     "NoIgnoreIt": "Tidak, Abaikan",
     "NoOtherLocation": "Tidak, Tetap pasang",
     "NotSelected": "Belum dipilih",
+    "ExtractAnyway": "Ekstrak Saja!",
 
-    "LangNameENUS": "Inggris (AS)",
+    "IAcceptAgreement": "Saya menyetujui perjanjian tersebut",
+    "IDoNotAcceptAgreement": "Saya tidak menyetujui perjanjian tersebut",
+
+    "LangNameENUS": "Inggris",
     "LangNameJP": "Jepang",
-    "LangNameCN": "Tiongkok (RRC)",
+    "LangNameCN": "Mandarin",
     "LangNameKR": "Korea",
 
     "Downloading": "Mengunduh",
@@ -467,6 +561,7 @@
     "Idle": "Diam",
     "Change": "Ubah",
     "Cancelled": "Dibatalkan",
+    "FinishingUp": "Menyelesaikan",
     "Extracting": "Meng-extract",
     "Converting": "Mengubah",
     "Patching": "Patching",
@@ -481,6 +576,7 @@
     "ApplyingPatch": "Menerapkan Patch",
     "Disabled": "Mati",
     "Enabled": "Nyala",
+    "UseAsDefault": "Gunakan sebagai Bawaan",
 
     "BuildChannelPreview": "Preview",
     "BuildChannelStable": "Stable",
@@ -488,6 +584,8 @@
     "CDNDescription_Github": "Repositori resmi (utama) untuk launcher",
     "CDNDescription_Cloudflare": "Mirror dari repositori resmi (main) yang dihost dalam bucket Cloudflare R2.",
     "CDNDescription_Bitbucket": "Mirror dari repositori resmi (main) yang dihost dalam Bitbucket.",
+    "CDNDescription_GitLab": "Mirror dari repositori resmi (main) yang dihost dalam GitLab.",
+    "CDNDescription_Coding": "Mirror dari repositori resmi (main) yang dihost dalam Coding.",
 
     "LocateExecutable": "Pilih Executable",
     "OpenDownloadPage": "Buka Halaman Download",
@@ -510,7 +608,14 @@
     "Taskbar_HideApp": "Sembunyikan jendela Collapse ke taskbar",
     "Taskbar_ShowConsole": "Tampilkan jendela konsol Collapse",
     "Taskbar_HideConsole": "Sembunyikan jendela konsol Collapse ke taskbar",
-    "Taskbar_ExitApp": "Hentikan Collapse Launcher"
+    "Taskbar_ExitApp": "Hentikan Collapse Launcher",
+
+    "LauncherNameOfficial": "Launcher Resmi",
+    "LauncherNameBHI3L": "BetterHi3Launcher",
+    "LauncherNameSteam": "Steam",
+    "LauncherNameUnknown": "(Nama launcher tidak diketahui)",
+
+    "ImageCropperTitle": "Memotong Gambar"
   },
 
   "_BackgroundNotification": {
@@ -530,6 +635,14 @@
     "DeltaPatchDetectedSubtitle": "Delta patch akan digunakan untuk pemperbarui game dari {0} ke {1}.\r\nPerlu diingat bahwa kamu mungkin masih perlu mengunduh beberapa berkas di dalam game.\r\n\r\nMau dilanjutkan?",
     "DeltaPatchPrevFailedTitle": "Pembaruan Delta Patch sebelumnya telah Gagal/Belum Selesai!",
     "DeltaPatchPrevFailedSubtitle": "Pembaruan Delta Patch sebelumnya telah Gagal/Belum Selesai! Apakah kamu ingin mengembalikan game? agar kamu tidak perlu mengunduh ulang.",
+    "DeltaPatchPreReqTitle": "Unduhan File Tambahan dibutuhkan untuk Delta Patch!",
+    "DeltaPatchPreReqSubtitle1": "Unduhan file tambahan dibutuhkan sebelum menerapkan delta patch. Sekitar ",
+    "DeltaPatchPreReqSubtitle2": " dibutuhkan untuk unduhan dan beberapa file berisi paket delta untuk audio.",
+    "DeltaPatchPreReqSubtitle3": "Apakah kamu mau lanjutkan?",
+    "DeltaPatchPreReqSubtitle4": "(Klik \"",
+    "DeltaPatchPreReqSubtitle5": "\" untuk melanjutkan atau \"",
+    "DeltaPatchPreReqSubtitle6": "\" untuk pembaruan normal atau \"",
+    "DeltaPatchPreReqSubtitle7": "\" untuk membatalkan pembaruan)",
     "GameConversionPrevFailedTitle": "Pengubahan Game sebelumnya telah Gagal/Belum Selesai!",
     "GameConversionPrevFailedSubtitle": "Pengubahan Game sebelumnya telah Gagal/Belum Selesai! Apakah kamu ingin mengembalikan game? agar kamu tidak perlu mengunduh ulang.",
     "PreloadVerifiedTitle": "Pra-unduh telah terverifikasi!",
@@ -549,7 +662,11 @@
     "RepairCompletedSubtitle": "{0} file telah diperbaiki.",
     "RepairCompletedSubtitleNoBroken": "Tidak ada file yang rusak.",
     "ExtremeGraphicsSettingsWarnTitle": "Pengaturan \"Sangat Tinggi\" Terdeteksi!",
-    "ExtremeGraphicsSettingsWarnSubtitle": "Kamu telah memilih pengaturan \"Sangat Tinggi\"!\r\nPerlu diingat bahwa pengaturan ini adalah 2x Render Scale dengan MSAA dinyalakan dan pengaturan ini SANGAT TIDAK OPTIMAL! (kecuali kamu lagi pakai NASA Super Computer).\r\n\r\nYakin ingin pilih pengaturan ini?",
+    "ExtremeGraphicsSettingsWarnSubtitle": "Kamu telah memilih pengaturan \"Sangat Tinggi\"!\r\nPerlu diingat bahwa pengaturan ini adalah 2x Render Scale dengan MSAA dinyalakan dan pengaturan ini SANGAT TIDAK OPTIMAL!\r\n\r\nYakin ingin pilih pengaturan ini?",
+    "MigrateExistingMoveDirectoryTitle": "Memindahkan Lokasi Instalasi untuk: {0}",
+    "MigrateExistingInstallChoiceTitle": "Instalasi Eksisting untuk {0} Terdeteksi!",
+    "MigrateExistingInstallChoiceSubtitle1": "Kamu memiliki instalasi game yang sudah terpasang menggunakan {0} pada direktori ini:",
+    "MigrateExistingInstallChoiceSubtitle2": "Kamu memiliki opsi untuk memindahkan data game yang sudah ada ke dalam direktori lainnya atau tetap menggunakan direktori yang sudah ada. Kamu direkomendasikan untuk menggunakan direktori yang sudah ada agar kamu masih tetap dapat menjalankan game menggunakan {0}.",
     "ExistingInstallTitle": "Instalasi yang sudah ada telah terdeteksi!",
     "ExistingInstallSubtitle": "Game sudah terpasang di lokasi ini:\r\n\r\n{0}\r\n\r\nKamu disarankan untuk pindahkan game ini ke Collapse Launcher.\r\nNamun, kamu masih dapat menggunakan launcher bawaan untuk menjalankan game ini.\r\n\r\nMau dilanjutkan?",
     "ExistingInstallBHI3LTitle": "Instalasi yang sudah ada pada BetterHI3Launcher telah terdeteksi!",
@@ -564,10 +681,14 @@
     "SteamConvertFailedSubtitle": "Maaf tapi proses pengubahan telah gagal! :(\nMohon coba lagi proses pengubahannya dari awal.",
     "InstallDataCorruptTitle": "Oops! Game Installation is Corrupted",
     "InstallDataCorruptSubtitle": "Maaf tapi sepertinya salah satu file yang telah terunduh telah rusak.\r\n\r\nCek Server: {0}\r\nCek Unduhan: {1}\r\n\r\nApakah kamu ingin mengunduh ulang filenya?",
+    "InstallCorruptDataAnywayTitle": "Ekstrak Data Corrupt",
+    "InstallCorruptDataAnywaySubtitle1": "Kamu akan mengekstrak data yang rusak ini: ",
+    "InstallCorruptDataAnywaySubtitle2": "{0} - {1} ({2} bytes)",
+    "InstallCorruptDataAnywaySubtitle3": ". Ingat bahwa akan ada kemungkinan kegagalan saat mengekstrak data ini atau bahkan menyebabkan game tidak dapat berjalan.\r\n\r\nApakah kamu yakin untuk lanjut mengekstrak data ini?",
     "InstallDataDownloadResumeTitle": "Lanjutkan Unduhan?",
     "InstallDataDownloadResumeSubtitle": "Kamu telah mengunduh {0} dari total ukuran game sebesar {1} sebelumnya.\r\n\r\nMau lanjut?",
     "InsufficientDiskTitle": "Ruang Penyimpanan Tidak Cukup",
-    "InsufficientDiskSubtitle": "Kamu tidak memiliki ruang yang cukup untuk memasang game ini pada disk drive {2}-mu!\r\n\r\nSisa Ruang: {0}\r\nRuang yang Dibutuhkan: {1}.\r\n\r\nPastikan kamu punya cukup ruang untuk memasang game ini.",
+    "InsufficientDiskSubtitle": "Kamu tidak memiliki ruang yang cukup pada drive {2}-mu!\r\n\r\nRuang tersedia: {0}\r\nRuang yang dibutuhkan: {1}\r\n\r\nPastikan bahwa kamu memiliki ruang yang cukup pada penyimpanan yang digunakan sebelum melanjutkan proses instalasi.",
     "RelocateFolderTitle": "Pindahkan Folder Data Aplikasi",
     "RelocateFolderSubtitle": "Kamu sedang menggunakan folder ini untuk lokasi data aplikasi:\n\n {0}\n\nApakah kamu ingin ganti ke lokasi lain?",
     "UninstallGameTitle": "Hapus Game: {0}",
@@ -576,9 +697,9 @@
     "MigrationSubtitle": "Sebelum memulai proses ini, Apakah kamu ingin menentukan lokasi gamenya?",
     "NeedInstallMediaPackTitle": "Media Feature Pack tidak ditemukan!",
     "NeedInstallMediaPackSubtitle1": "PERINGATAN: Mulai dari update v5.8, Honkai Impact 3 membutuhkan \"Media Feature Pack\" terpasang pada PC-mu untuk menjalankan game. Hal ini akan memperbaiki error \"Unable to load DLL 'cri_ware_unity'\" pada game.\r\n\r\n",
-    "NeedInstallMediaPackSubtitle2": "Kamu perlu restart PC-mu terlebih dahulu setelah selesai memasang Media Feature Pack. Kamu bisa lewati peringatan ini tapi ada kemungkinan bahwa kamu akan mendapatkan error \"Unable to load DLL 'cri_ware_unity'\" saat menjalankan game.",
+    "NeedInstallMediaPackSubtitle2": "Kamu perlu restart PC-mu terlebih dahulu setelah selesai memasang Media Feature Pack. Kamu bisa lewati peringatan ini tapi ada kemungkinan bahwa kamu akan mendapatkan error saat kamu memainkan beberapa game seperti Honkai Impact 3rd.",
     "InstallMediaPackCompleteTitle": "Media Feature Pack selesai dipasang!",
-    "InstallMediaPackCompleteSubtitle": "Media Feature Pack sudah selesai dipasang dalam PC-mu.\r\nTapi kamu perlu restart PC-mu terlebih dahulu sebelum main :)",
+    "InstallMediaPackCompleteSubtitle": "Media Feature Pack sudah selesai dipasang dalam PC-mu.\r\nMohon untuk restart PC-mu untuk menerapkan perubahan!",
     "InstallingMediaPackTitle": "Memasang Media Feature Pack",
     "InstallingMediaPackSubtitle": "Menunggu hingga proses selesai...",
     "InstallingMediaPackSubtitleFinished": "Selesai",
@@ -594,29 +715,97 @@
     "CookbookLocateSubtitle5": "untuk memilih file Cookbook yang sudah terunduh dan memulai proses konversi.\r\n\r\n",
     "CookbookLocateSubtitle6": "Catatan:\r\n",
     "CookbookLocateSubtitle7": "Berikut adalah nama file Cookbook yang perlu kamu unduh:\r\n",
+
     "PrivilegeMustRunTitle": "Collapse membutuhkan elevasi hak akses!",
     "PrivilegeMustRunSubtitle": "Collapse membutuhkan hak akses sebagai administrator untuk berjalan. Apakah kamu ingin restart Collapse and jalankan sebagai adminisrator?",
+
     "ReleaseChannelChangeTitle": "Ubah Kanal Rilis",
     "ReleaseChannelChangeSubtitle1": "Kamu akan mengubah kanal rilismu ke:",
     "ReleaseChannelChangeSubtitle2": "Catatan:",
     "ReleaseChannelChangeSubtitle3": "Melakukan hal ini memungkinkan adanya perubahan yang tidak bisa dikembalikan atau inkompatibilitas.",
+
     "ChangePlaytimeTitle": "Apakah anda yakin untuk mengubah waktu main?",
     "ChangePlaytimeSubtitle": "Mengubah waktu main anda berarti menimpa nilai saat ini dengan yang sudah anda masukkan.\n\nLanjut untuk mengubah?\n\nCatatan: Hal ini tidak akan mempengaruhi cara Collapse berjalan dan anda dapat mengubah nilai kembali kapan saja saat anda tidak sedang memainkan gamenya.",
     "ResetPlaytimeTitle": "Apakah anda yakin untuk setel ulang waktu main?",
     "ResetPlaytimeSubtitle": "Menyetel ulang waktu main anda akan mengatur ulang hitungan menjadi 0. Hal ini bersifat ",
     "ResetPlaytimeSubtitle2": "\"destructive\"",
     "ResetPlaytimeSubtitle3": "yang berarti anda tidak akan bisa mengembalikannya setelah anda mengkonfirmasi.\n\nLanjut untuk mengubah?\n\nCatatan: Hal ini tidak akan mempengaruhi cara Collapse berjalan dan anda dapat mengubah nilai kembali kapan saja saat anda tidak sedang memainkan gamenya.",
+    "InvalidPlaytimeTitle": "Terjadi masalah saat menyimpan sesi bermain",
+    "InvalidPlaytimeSubtitle1": "Perbedaan dalam waktu permulaan dan akhiran menghasilkan nomor negatif",
+    "InvalidPlaytimeSubtitle2": "Nilai asali akan digunakan setiap menit: ",
+    "InvalidPlaytimeSubtitle3": "Mohon untuk tidak mengubah jam pada komputer saat bermain.",
+
     "LocateExePathTitle": "Pilih Lokasi Pemasangan Executable",
     "LocateExePathSubtitle": "Silahkan arahkan Collapse ke lokasi dari executable aplikasimu:",
+
     "CannotUseAppLocationForGameDirTitle": "Folder tidak valid!",
     "CannotUseAppLocationForGameDirSubtitle": "Anda tidak dapat menggunakan folder ini karena digunakan sebagai folder sistem atau digunakan sebagai folder utama dari executable aplikasi ini. Mohon untuk gunakan folder lainnya!",
+
     "StopGameTitle": "Tutup Paksa Game",
     "StopGameSubtitle": "Apakah anda yakin ingin menutup game yang sedang berjalan?\nAnda akan kehilangan progress di dalam game.",
+
     "MeteredConnectionWarningTitle": "Koneksi Internet Berbayar Ditemukan!",
     "MeteredConnectionWarningSubtitle": "Koneksi internet anda saat ini terdeteksi sebagai koneksi \"berbayar\"! Melanjutkan proses update dapat menambah tagihan internet dari penyedia layanan internet. Apakah kamu ingin melanjutkan aksi ini?",
 
     "ResetKbShortcutsTitle": "Apa kamu yakin untuk mengatur ulang semua pintasan?",
-    "ResetKbShortcutsSubtitle": "Semua pintasan akan diatur ulang ke kombinasi tombol bawaan.\n\nApakah kamu ingin melanjutkan aksi ini?\n\nCatatan: Aksi ini tidak berdampak pada bagaimana Collapse bekerja dan kamu tetap dapat mengubah kombinasi pintasan di menu Pintasan Keyboard."
+    "ResetKbShortcutsSubtitle": "Semua pintasan akan diatur ulang ke kombinasi tombol bawaan.\n\nApakah kamu ingin melanjutkan aksi ini?\n\nCatatan: Aksi ini tidak berdampak pada bagaimana Collapse bekerja dan kamu tetap dapat mengubah kombinasi pintasan di menu Pintasan Keyboard.",
+
+    "OperationErrorDiskSpaceInsufficientTitle": "Ruang untuk Drive: {0} Tidak Cukup!",
+    "OperationErrorDiskSpaceInsufficientMsg": "Kamu tidak memiliki cukup ruang pada drive {2} untuk melakukan operasi ini!\r\n \r\nRuang Tersedia: {0}\r\nRuang yang Diperlukan: {1}\r\n\r\nPastikan kamu memiliki ruang yang cukup sebelum melanjutkan.",
+
+    "OperationWarningNotCancellableTitle": "Perhatian: Operasi ini TIDAK DAPAT DIBATALKAN!",
+    "OperationWarningNotCancellableMsg1": "Kamu perlu memastikan terlebih dahulu bahwa tidak ada task berat yang sedang berjalan pada komputermu untuk menghindari terjadinya issue saat operasi ini sedang berlangsung. Perlu diperhatikan bahwa kamu ",
+    "OperationWarningNotCancellableMsg2": "TIDAK DAPAT MEMBATALKAN PROSES INI",
+    "OperationWarningNotCancellableMsg3": " saat proses sedang berjalan!\r\n\r\nKlik \"",
+    "OperationWarningNotCancellableMsg4": "\" untuk memulai proses atau \"",
+    "OperationWarningNotCancellableMsg5": "\" untuk membatalkan.",
+
+    "GenericWarningExceptionTitle": "Peringatan",
+    "GenericWarningExceptionSubtitle": "Hal ini bukan masalah penting, namun kami pikir kamu perlu tahu ini:",
+
+    "ShortcutCreationConfirmTitle": "Apakah kamu yakin ingin melanjutkan?",
+    "ShortcutCreationConfirmSubtitle1": "Pintasan akan dibuat pada tempat ini:",
+    "ShortcutCreationConfirmSubtitle2": "Jika pintasan sudah ada dengan nama yang sama di folder ini, maka pintasan tersebut akan digantikan.",
+    "ShortcutCreationConfirmCheckBox": "Langsung memulai game setelah menggunakan pintasan ini",
+    "ShortcutCreationSuccessTitle": "Sukses!",
+    "ShortcutCreationSuccessSubtitle1": "Sebuah pintasan baru sudah dibuat!",
+    "ShortcutCreationSuccessSubtitle2": "Lokasi:",
+    "ShortcutCreationSuccessSubtitle3": "Catatan:",
+    "ShortcutCreationSuccessSubtitle4": "• Menggunakan pintasan ini akan memulai game setelah wilayah termuat.",
+    "ShortcutCreationSuccessSubtitle5": " • Apabila game tidak terpasang/belum diperbarui, maka Collapse akan mencoba untuk memasang atau memperbarui game. Mohon diingat bahwa dialog instalasi akan tetap muncul.",
+
+    "SteamShortcutCreationConfirmTitle": "Apakah kamu yakin ingin melanjutkan?",
+    "SteamShortcutCreationConfirmSubtitle1": "Jalan pintas akan ditambahkan pada setiap user Steam di dalam komputer ini.",
+    "SteamShortcutCreationConfirmSubtitle2": "Jika sudah dibuat sebelumnya, asset yang berhubungan dengan pintasan ini akan diverifikasi.",
+    "SteamShortcutCreationConfirmCheckBox": "Langsung memulai game setelah menggunakan pintasan ini",
+    "SteamShortcutCreationSuccessTitle": "Sukses!",
+    "SteamShortcutCreationSuccessSubtitle1": "Pintasan telah dibuat untuk setiap pengguna Steam di komputer ini!",
+    "SteamShortcutCreationSuccessSubtitle2": "Catatan:",
+    "SteamShortcutCreationSuccessSubtitle3": "• Menggunakan pintasan ini akan memulai game setelah wilayah termuat.",
+    "SteamShortcutCreationSuccessSubtitle4": "• Mengulangi proses ini dapat memperbaiki gambar yang hilang/rusak pada pintasan.",
+    "SteamShortcutCreationSuccessSubtitle5": "• Pintasan akan terlihat setelah Steam dimuat ulang.",
+    "SteamShortcutCreationSuccessSubtitle6": " • Dalam menggunakan overlay pada Steam, Steam harus berjalan sebagai administrator dan Collapse harus ditutup atau memiliki opsi \"Multiple Instances\" yang sudah dinyalakan pada menu \"Pengaturan Aplikasi\".",
+    "SteamShortcutCreationSuccessSubtitle7": "• Apabila game tidak terpasang/belum diperbarui, maka Collapse akan mencoba untuk memasang atau memperbarui game. Mohon diingat bahwa dialog instalasi akan tetap muncul.",
+
+    "SteamShortcutCreationFailureTitle": "Folder data Steam tidak valid",
+    "SteamShortcutCreationFailureSubtitle": "Tidak dapat menemukan folder userdata yang valid.\n\nPastikan kamu telah masuk ke klien Steam setidaknya sekali sebelum menggunakan fitur ini.",
+
+    "DownloadSettingsTitle": "Pengaturan Download",
+    "DownloadSettingsOption1": "Mulai game setelah proses install"
+  },
+
+  "_FileMigrationProcess": {
+    "PathActivityPanelTitle": "Memindahkan: ",
+    "SpeedIndicatorTitle": "Kecepatan: ",
+    "FileCountIndicatorTitle": "File terproses: ",
+    "LocateFolderSubtitle": "Pilih lokasi untuk memindahkan file/folder ke dalam lokasi target.",
+    "ChoosePathTextBoxPlaceholder": "Pilih lokasi target...",
+    "ChoosePathButton": "Pilih Lokasi",
+    "ChoosePathErrorTitle": "Error Terjadi!",
+    "ChoosePathErrorPathIdentical": "Output path yang kamu pilih identik atau masih sama di dalam lokasi saat ini!\r\nSilahkan pilih lokasi lainnya!",
+    "ChoosePathErrorPathUnselected": "Pilih lokasi sebelum melanjutkan!",
+    "ChoosePathErrorPathNotExist": "Lokasi tidak ditemukan!",
+    "ChoosePathErrorPathNoPermission": "Kamu tidak memiliki izin untuk mengakses lokasi ini! Silahkan pilih lokasi lain!"
   },
 
   "_InstallMgmt": {
@@ -625,7 +814,7 @@
     "AddtDownloadTitle": "Mengunduh: {0}/{1}",
     "RepairFilesRequiredShowFilesBtn": "Tampilkan daftar file yang rusak",
     "RepairFilesRequiredTitle": "{0} file perlu diperbaiki!",
-    "RepairFilesRequiredSubtitle": "Kamu memiliki setidaknya {0} file (ukuran: {1}) yang perlu diperbaiki sebelum diupdate!\r\n\r\nCatatan: Process ini akan memakan waktu (tergantung seberapa cepat dan stabilnya koneksimu). Kamu direkomendasikan untuk gunakan VPN (VPN gratis seperti ProtonVPN sudah cukup) apabila kamu tidak punya koneksi yang cepat :)"
+    "RepairFilesRequiredSubtitle": "Kamu memiliki setidaknya {0} file (ukuran: {1}) yang perlu diperbaiki sebelum diupdate!\r\n\r\nCatatan: Process ini akan memakan waktu (tergantung seberapa cepat dan stabilnya koneksimu). Kamu direkomendasikan untuk gunakan VPN apabila kamu tidak punya koneksi yang cepat :)"
   },
 
   "_InstallConvert": {
@@ -654,6 +843,8 @@
     "ConvertSuccessSubtitle": "Pengubahan Game dari {0} ke {1} telah berhasil dilakukan!",
     "CookbookDownloadTitle": "Mengunduh Resep",
     "CookbookDownloadSubtitle": "Mengunduh resep untuk pengubahan dari {0} ke {1}",
+
+    "CookbookFileBrowserFileTypeCategory": "Cookbook untuk {0} ke {1}",
 
     "CancelBtn": "Batalkan Pengubahan",
     "CancelMsgTitle": "Membatalkan Pengubahan...",
@@ -687,7 +878,7 @@
     "ConvertSuccessSubtitle": "Pengubahan Game dari {0} ke {1} telah berhasil dilakukan!",
     "InnerCheckFile": "Memeriksa File {0} [{1}/{2}]: {3}",
     "InnerCheckBlock1": "Memeriksa {0}: {1}",
-    "InnerCheckBlock2": "Memeriksa {0]: {1} -> (0x{2} | Ukuran: 0x{3})",
+    "InnerCheckBlock2": "Memeriksa {0}: {1} -> (0x{2} | Ukuran: 0x{3})",
     "InnerConvertFile1": "Mengubah File {0} [{1}/{2}]: {3}",
     "InnerConvertFile2": "Mengunduh {0} [{1}/{2}]: {3}",
     "InnerConvertFile3": "Mengunduh {0} [{1}/{2}]: {3} -> (0x{4} | Ukuran: 0x{5})"
@@ -724,6 +915,8 @@
     "UpdateHeader4": "Kecepatan:",
     "UpdateHeader5PlaceHolder": "Mengunduh Update [- / -]:",
 
+    "UpdateForcedHeader": "Launcher akan diperbarui secara paksa dikarenakan perubahan penting untuk memastikan launcher dapat berjalan dengan semestinya.",
+
     "UpdateStatus1": "Memuat Update:",
     "UpdateMessage1": "Menghubungkan dengan Repository Update...",
     "UpdateStatus2": "Memverifikasi:",
@@ -735,7 +928,52 @@
 
     "UpdateCountdownMessage1": "Launcher akan diperbaruhi dalam {0}...",
     "UpdateCountdownMessage2": "(Klik",
-    "UpdateCountdownMessage3": "untuk membatalkan hitungan mundur)"
+    "UpdateCountdownMessage3": "untuk membatalkan hitungan mundur)",
+
+    "ApplyUpdateTitle1": "Memperbarui",
+    "ApplyUpdateTitle2": "Collapse Launcher",
+    "ApplyUpdateCDNSelectorTitle": "Pilih CDN untuk memperbarui",
+    "ApplyUpdateCDNSelectorSubtitle": "Pilih opsi CDN dan klik \"{0}\" untuk memulai pembaruan!",
+    "ApplyUpdateCDNSelectorSubtitleCount": "CDN akan otomatis dipilih dalam: {0}",
+    "ApplyUpdateUpdateNowBtn": "Perbarui Sekarang!",
+
+    "ApplyUpdateUpdateVersionTitle": "Memperbarui:",
+    "ApplyUpdateUpdateChannelTitle": "Kanal:",
+    "ApplyUpdateUpdateChannelSubtitlePlaceholder": "Tidak diketahui",
+    "ApplyUpdateUpdateStatusTitle": "Status:",
+    "ApplyUpdateMiscIdle": "Idle",
+    "ApplyUpdateMiscNone": "Tidak diketahui",
+    "ApplyUpdateVersionSeparator": "ke",
+
+    "ApplyUpdateErrCollapseRunTitle": "Mohon tutup Collapse sebelum menerapkan pembaruan!",
+    "ApplyUpdateErrCollapseRunSubtitle": "Menunggu Collapse untuk ditutup...",
+    "ApplyUpdateErrReleaseFileNotFoundTitle": "ERROR:\nfile \"release\" tidak memiliki string \"stable\" atau \"preview\" didalamnya",
+    "ApplyUpdateErrReleaseFileNotFoundSubtitle": "Mohon periksa file \"release\" dan coba lagi.",
+
+    "ApplyUpdateDownloadSizePlaceholder": "- B / - B",
+    "ApplyUpdateDownloadSpeed": "{0}/d",
+    "ApplyUpdateDownloadSpeedPlaceholder": "- B/d",
+    "ApplyUpdateDownloadTimeEst": "{0:%h}j{0:%m}m{0:%s}d tersisa",
+    "ApplyUpdateDownloadTimeEstPlaceholder": "--j--m--d tersisa",
+
+    "ApplyUpdateTaskLegacyVerFoundTitle": "Instalasi legacy dari Collapse v{0} terdeteksi!",
+    "ApplyUpdateTaskLegacyVerFoundSubtitle1": "Kami mendeteksi bahwa kamu memiliki instalasi legacy dari Collapse {0}.",
+    "ApplyUpdateTaskLegacyVerFoundSubtitle2": "File-file lama didalamnya perlu dibersihkan terlebih dahulu sebelum melakukan pembaruan.\r\n",
+    "ApplyUpdateTaskLegacyVerFoundSubtitle3": "Pastikan kamu tidak memiliki file penting di dalam folder Collapse atau file kamu akan IKUT TERHAPUS!",
+    "ApplyUpdateTaskLegacyVerFoundSubtitle4": "\r\n\r\nKlik \"Yes\" untuk melanjutkan atau \"No\" untuk membatalkan.",
+    "ApplyUpdateTaskLegacyVerFoundSubtitle5": "Klik \"Yes\" sekali lagi untuk melanjutkan.",
+    "ApplyUpdateTaskLegacyCleanupCount": "Proses pembersihan akan dimulai dalam {0}...",
+    "ApplyUpdateTaskLegacyDeleting": "Menghapus: {0}...",
+
+    "ApplyUpdateTaskDownloadingPkgTitle": "Mengunduh paket",
+    "ApplyUpdateTaskExtractingPkgTitle": "Mengekstrak paket",
+    "ApplyUpdateTaskRemoveOldPkgTitle": "Menghapus paket lama",
+    "ApplyUpdateTaskMovingExtractFileTitle": "Memindahkan file ter-ekstrak",
+
+    "ApplyUpdateTaskLauncherUpdatedTitle": "Launcher telah diupdate ke versi: {0}!",
+    "ApplyUpdateTaskLauncherUpdatedSubtitle": "Menjalankan Collapse dalam {0}...",
+
+    "ApplyUpdateTaskError": "ERROR:\r\nError telah terjadi saat menerapkan pembaruan!\r\n{0}"
   },
 
   "_AppNotification": {
@@ -750,7 +988,7 @@
     "NotifFirstWelcomeBtn": "Kunjungi Wiki GitHub",
 
     "NotifPreviewBuildUsedTitle": "Kamu sedang menggunakan Build Preview!",
-    "NotifPreviewBuildUsedSubtitle": "Kamu sedang menggunakan build preview dan kamu mungkin akan mengalami beberapa issue pada saat mencoba fitur eksperimental. Apabila kamu ingin melaporkan issue yang kamu dapat, klik tombol \"{0}\" di bawah ini untuk mengirim issue-mu.",
+    "NotifPreviewBuildUsedSubtitle": "Kamu menggunakan build [Preview] dan beberapa fitur masih dalam tahap percobaan. Apabila kamu mengalami beberapa issue, silahkan laporkan dengan klik tombol \"{0}\" di bawah ini. Terima kasih!",
     "NotifPreviewBuildUsedBtn": "Kirim Issue",
 
     "NotifKbShortcutTitle": "Fitur baru telah tiba!",
@@ -767,13 +1005,15 @@
     "Graphics_ExclusiveFullscreen": "Gunakan Layar Penuh Eksklusif",
     "Graphics_ResSelectPlaceholder": "Pilih",
     "Graphics_ResCustom": "Gunakan Resolusi Lainnya",
+    "Graphics_ResCustomTooltip": "Resolusi Kustom hanya dapat digunakan bersamaan dengan Jendela Fleksibel",
     "Graphics_ResCustomW": "P",
     "Graphics_ResCustomH": "T",
 
     "Graphics_FPS": "FPS",
     "Graphics_FPS_Help": "120 FPS merupakan opsi EKSPERIMENTAL. Gunakan dengan resiko sendiri.",
-    "Graphics_FPS_Help2": "Selain itu, Setelan 120 FPS juga merusak Pengaturan Grafis dalam Game.\r\nGunakan Collapse untuk mengubah Pengaturan Grafis Game.",
+    "Graphics_FPS_Help2": "Mengatur limit FPS ke 120 tidak akan lagi menyebabkan issue pada settings menu pada game tapi nilai limit FPS dengan nilai yang lebih rendah di dalam game tidak akan bekerja.\r\nApabila kamu ingin mengubah nilai limit FPS, gunakan Collapse untuk mengubahnya.",
     "Graphics_VSync": "VSync",
+    "Graphics_VSync_Help": "VSync tidak tersedia pada mode 120 FPS",
     "Graphics_RenderScale": "Akurasi Rendering",
     "Graphics_ResolutionQuality": "Kualitas Resolusi",
     "Graphics_ShadowQuality": "Kualitas Bayangan",
@@ -804,7 +1044,7 @@
     "OverlayFirstTimeTitle": "Kamu belum pernah memainkan game ini!",
     "OverlayFirstTimeSubtitle": "Mohon jalankan game ini untuk pertama kalinya terlebih dahulu dan kembali lagi untuk menggunakan fitur ini.",
 
-    "CustomArgs_Title": "Penyesuaian Argumen Pemulaian",
+    "CustomArgs_Title": "Penyesuaian Argumen Pemulaian (Tingkat Lanjut)",
     "CustomArgs_Subtitle": "Argumen Pemulaian",
     "CustomArgs_Footer1": "Untuk informasi lebih lanjut mengenai Argumen Pemulaian, silahkan cek dokumentasi",
     "CustomArgs_Footer2": "\"Unity Standalone Command-line\"",
@@ -821,7 +1061,7 @@
     "Language_Help1": "Collapse saat ini tidak mendukung pengunduhan paket Audio secara langsung.",
     "Language_Help2": "Paket Audio dapat diunduh di dalam game setelah kamu menjalankan gamenya kemudian.",
     "LanguageAudio": "Audio",
-    "LanguageText": "Text",
+    "LanguageText": "Teks",
     "VO_en": "Inggris",
     "VO_cn": "Mandarin",
     "VO_jp": "Jepang",
@@ -863,6 +1103,8 @@
     "Graphics_GlobalIllumination": "Iluminasi Global",
     "Graphics_GlobalIllumination_Help1": "Hanya untuk perangkat keras yang didukung!",
     "Graphics_GlobalIllumination_Help2": "Informasi lebih lanjut (en)",
+    "Graphics_DynamicCharacterResolution": "Resolusi Dinamik Karakter",
+    "Graphics_DynamicCharacterResolution_Tooltip": "Hanya untuk perangkat yang didukung saja!",
     "Graphics_HDR": "HDR",
     "Graphics_HDR_Enable": "Nyalakan HDR",
     "Graphics_HDR_NotSupported1": "Monitor kamu tidak mendukung HDR.",
@@ -878,7 +1120,7 @@
     "Graphics_HDR_SceneBrightness": "Kecerahan Pemandangan",
     "Graphics_HDR_SceneBrightness_Help": "Mengatur seberapa cerah pemandangan",
 
-    "Graphics_SpecPanel": "Pengaturan Grafis Global",
+    "Graphics_SpecPanel": "Pengaturan Grafis Keseluruhan",
     "SpecEnabled": "Aktif",
     "SpecDisabled": "Mati",
     "SpecVeryLow": "S. Rendah",
@@ -899,7 +1141,7 @@
     "OverlayFirstTimeTitle": "Anda belum pernah memainkan game ini sebelumnya!",
     "OverlayFirstTimeSubtitle": "Mohon jalankan game terlebih dahulu untuk generate file yang dibutuhkan, lalu kembali untuk menggunakan fitur ini.",
 
-    "CustomArgs_Title": "Penyesuaian Argument Pemulaian",
+    "CustomArgs_Title": "Penyesuaian Argument Pemulaian (Tingkat Lanjut)",
     "CustomArgs_Subtitle": "Argumen Pemulaian",
     "CustomArgs_Footer1": "Untuk informasi lebih lanjut mengenai Argumen Pemulaian, silahkan cek dokumentasi",
     "CustomArgs_Footer2": "Unity Standalone Player Command-line",
@@ -913,13 +1155,13 @@
 
     "Audio_Output_Surround": "Gunakan Suara Surround",
     "Audio_DynamicRange": "Full Dynamic Range",
-    "Audio_MuteOnMinimize": "Mute Audio When Minimized",
+    "Audio_MuteOnMinimize": "Mute Suara saat Minimize",
 
     "Language": "Pengaturan Bahasa",
     "Language_Help1": "Collapse saat ini tidak dapat men-download paket Audio secara langsung.",
     "Language_Help2": "Paket Audio akan di-download di dalam game pada saat game dijalankan.",
     "LanguageAudio": "Audio",
-    "LanguageText": "Text",
+    "LanguageText": "Teks",
     "VO_en": "Inggris",
     "VO_cn": "Mandarin",
     "VO_jp": "Jepang",
@@ -946,7 +1188,7 @@
     "Switch_Subtitle": "Catatan: Kombinasi mengikuti urutan pilihan.",
     "Switch_SwapBtn": "Tukar {0} dengan {1}",
     "Switch_ChangeGame": "Ubah game",
-    "Switch_ChangeGame_Desc": "Kamu juga dapat menggunakan NumPad untuk pintasan ini!\nContoh: {0}+1 atau NumPad1 (tanpa modifier {0}) membuka halaman terakhir Honkai Impact 3rd.",
+    "Switch_ChangeGame_Desc": "Kamu juga dapat menggunakan NumPad untuk pintasan ini!\nContoh: {0}+1 atau NumPad1 (tanpa modifier {0}) membuka halaman terakhir (region yang terakhir digunakan) pada Honkai Impact 3rd.",
     "Switch_ChangeRegion": "Ubah region",
     "Switch_ChangeRegion_Desc": "Contoh. Untuk Genshin Impact, {0}+1 membuka region Global.",
 
@@ -968,6 +1210,69 @@
     "ChangeShortcut_Help1": "Sebuah pintasan terdiri dari 2 bagian:",
     "ChangeShortcut_Help2": "・Pengubah - Shift, Ctrl atau Alt/Menu",
     "ChangeShortcut_Help3": "・Tombol - Alfabet (A ke Z) atau Tab",
-    "ChangeShortcut_Help4": "Kamu dapat memilih kombinasi apa pun dari masing-masing bagian, kecuali juga sudah digunakan oleh Collapse atau sistem."
+    "ChangeShortcut_Help4": "Kamu dapat memilih kombinasi apa pun dari masing-masing bagian, kecuali juga sudah digunakan oleh Collapse atau sistem.",
+
+    "Keyboard_Control": "Ctrl",
+    "Keyboard_Menu": "Alt",
+    "Keyboard_Shift": "Shift"
+  },
+
+  "_GameClientTitles": {
+    "Honkai Impact 3rd": "Honkai Impact 3rd",
+    "Genshin Impact": "Genshin Impact",
+    "Honkai: Star Rail": "Honkai: Star Rail",
+    "Zenless Zone Zero": "Zenless Zone Zero"
+  },
+
+  "_GameClientRegions": {
+    "Southeast Asia": "Asia Tenggara",
+    "Global": "Global",
+    "Mainland China": "Tiongkok Daratan",
+    "TW/HK/MO": "Tiongkok Tradisional",
+    "Korea": "Korea",
+    "Japan": "Jepang",
+    "Bilibili": "Bilibili"
+  },
+
+  "_OOBEAgreementMenu": {
+    "AgreementTitle": "Perjanjian:"
+  },
+
+  "_OOBEStartUpMenu": {
+    "WelcomeTitleString": {
+      "Upper": [ "Selamat ", "Datang di" ],
+      "Lower": [ "Collapse ", "Launcher" ]
+    },
+    "SetupNextButton": "Klik di sini untuk melanjutkan",
+    "SetupBackButton": "Kembali",
+
+    "CustomizationTitle": "Menyesuaikan Launchermu",
+    "CustomizationSettingsLanguageHeader": "Bahasa",
+    "CustomizationSettingsLanguageDescription": "Informasi akan ditampilkan sesuai dengan bahasa yang digunakan.",
+    "CustomizationSettingsWindowSizeHeader": "Ukuran Window",
+    "CustomizationSettingsWindowSizeDescription": "Menyesuaikan ukuran window pada launcher.",
+    "CustomizationSettingsCDNHeader": "Content Delivery Network",
+    "CustomizationSettingsCDNDescription": "Pilih Content Delivery Network utama yang akan digunakan.",
+    "CustomizationSettingsStyleHeader": "Pilihan Style",
+    "CustomizationSettingsStyleDescription": "Ubah tampilan pada launcher sesuai keinginanmu.",
+    "CustomizationSettingsStyleThemeHeader": "Tema",
+    "CustomizationSettingsStyleThemeDescription": "Ubah warna yang akan ditampilkan pada launcher.",
+    "CustomizationSettingsStyleCustomBackgroundHeader": "Gambar Latar Belakang Kustom",
+    "CustomizationSettingsStyleCustomBackgroundDescription": "Gunakan gambar latar belakang kustom ketimbang dengan bawaan.",
+
+    "VideoBackgroundPreviewUnavailableHeader": "Preview untuk Background Video Tidak Tersedia",
+    "VideoBackgroundPreviewUnavailableDescription": "Kamu saat ini tidak bisa melihat preview background video di dalam OOBE, tapi jangan khawatir! Video background kamu akan diterapkan setelah kamu menyelesaikan tahap OOBE ini.",
+
+    "LoadingInitializationTitle": "Mempersiapkan Launcher untuk Pertama Kalinya",
+    "LoadingCDNCheckboxCheckLatency": "(Memeriksa Latensi...)",
+    "LoadingCDNCheckboxPlaceholder": "Memeriksa Rekomendasi CDN...",
+    "LoadingCDNCheckingSubitle": "Mencari Content Delivery Network (CDN) yang terdekat denganmu...",
+    "LoadingCDNCheckingSkipButton": "Lewati Pencarian CDN",
+    "LoadingBackgroundImageTitle": "Memuat Gambar",
+    "LoadingBackgroundImageSubtitle": "Gambar akan dimuat dan memerlukan waktu untuk diproses.",
+
+    "CDNCheckboxItemLatencyFormat": "({0} md)",
+    "CDNCheckboxItemLatencyUnknownFormat": "(Tidak diketahui)",
+    "CDNCheckboxItemLatencyRecommendedFormat": "[Direkomendasikan]"
   }
 }

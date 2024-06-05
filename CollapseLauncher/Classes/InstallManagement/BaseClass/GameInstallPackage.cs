@@ -5,36 +5,61 @@ using Hi3Helper.Http;
 using Hi3Helper.Preset;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 
 namespace CollapseLauncher.InstallManager
 {
+    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
     internal class GameInstallPackage : IAssetIndexSummary
     {
         #region Properties
-        public string URL { get; set; }
-        public string DecompressedURL { get; set; }
-        public string Name { get; set; }
-        public string PathOutput { get; set; }
-        public GameInstallPackageType PackageType { get; set; }
-        public long Size { get; set; }
-        public long SizeRequired { get; set; }
-        public long SizeDownloaded { get; set; }
-        public GameVersion Version { get; set; }
-        public byte[] Hash { get; set; }
-        public string HashString { get => HexTool.BytesToHexUnsafe(Hash); }
-        public int LanguageID { get; set; } = int.MinValue;
-        public string LanguageName { get; set; }
-        public List<GameInstallPackage> Segments { get; set; }
+        public string                   URL             { get; set; }
+        public string                   DecompressedURL { get; set; }
+        public string                   Name            { get; set; }
+        public string                   PathOutput      { get; set; }
+        public GameInstallPackageType   PackageType     { get; set; }
+        public long                     Size            { get; set; }
+        public long                     SizeRequired    { get; set; }
+        public long                     SizeDownloaded  { get; set; }
+        public GameVersion              Version         { get; set; }
+        public byte[]                   Hash            { get; set; }
+        public string                   HashString      { get => HexTool.BytesToHexUnsafe(Hash); }
+        public int                      LanguageID      { get; set; } = int.MinValue;
+        public string                   LanguageName    { get; set; }
+        public List<GameInstallPackage> Segments        { get; set; }
+        public string                   RunCommand      { get; set; }
+        public string                   PluginId        { get; set; }
         #endregion
+
+        public GameInstallPackage(RegionResourcePlugin packageProperty, string pathOutput)
+            : this(packageProperty.package, pathOutput)
+        {
+            PluginId = packageProperty.plugin_id;
+            RunCommand = packageProperty.package.run_command;
+
+            if (packageProperty.version != null)
+            {
+                Version = new GameVersion(packageProperty.version);
+            }
+            PackageType = GameInstallPackageType.Plugin;
+        }
 
         public GameInstallPackage(RegionResourceVersion packageProperty, string pathOutput, string overrideVersion = null)
         {
+            if (packageProperty == null || pathOutput == null) throw new NullReferenceException();
+            
             if (packageProperty.path != null)
             {
                 URL = packageProperty.path;
                 Name = Path.GetFileName(packageProperty.path);
+                PathOutput = Path.Combine(pathOutput, Name);
+            }
+            else if (packageProperty.url != null)
+            {
+                URL = packageProperty.url;
+                Name = Path.GetFileName(packageProperty.url);
                 PathOutput = Path.Combine(pathOutput, Name);
             }
 
@@ -71,6 +96,7 @@ namespace CollapseLauncher.InstallManager
 
         public bool IsReadStreamExist(int count)
         {
+            if (PathOutput == null) return false;
             // Check if the single file exist or not
             FileInfo fileInfo = new FileInfo(PathOutput);
             if (fileInfo.Exists)
@@ -84,16 +110,16 @@ namespace CollapseLauncher.InstallManager
                 // Append the hash number to the path
                 string path = $"{PathOutput}.{ID}";
                 // Get the file info
-                FileInfo fileInfo = new FileInfo(path);
+                FileInfo _fileInfo = new FileInfo(path);
                 // Check if the file exist
-                return fileInfo.Exists;
+                return _fileInfo.Exists;
             });
         }
 
         public Stream GetReadStream(int count)
         {
             // Get the file info of the single file
-            FileInfo fileInfo = new FileInfo(PathOutput);
+            FileInfo fileInfo = new FileInfo(PathOutput!);
             // Check if the file exist and the length is equal to the size
             if (fileInfo.Exists && fileInfo.Length == Size)
             {
@@ -115,7 +141,7 @@ namespace CollapseLauncher.InstallManager
         public long GetStreamLength(int count)
         {
             // Get the file info of the single file
-            FileInfo fileInfo = new FileInfo(PathOutput);
+            FileInfo fileInfo = new FileInfo(PathOutput!);
             // Check if the file exist and the length is equal to the size
             if (fileInfo.Exists && fileInfo.Length == Size)
             {
@@ -181,6 +207,7 @@ namespace CollapseLauncher.InstallManager
                     // Add length to the existing one
                     length += fileInfo.Length;
                     // Then go back to the loop routine
+                    // ReSharper disable once RedundantJumpStatement
                     continue;
                 }
             }
@@ -194,7 +221,7 @@ namespace CollapseLauncher.InstallManager
             string lastFile = PathOutput;
             try
             {
-                FileInfo fileInfo = new FileInfo(PathOutput);
+                FileInfo fileInfo = new FileInfo(PathOutput!);
                 if (fileInfo.Exists && fileInfo.Length == Size)
                 {
                     fileInfo.Delete();

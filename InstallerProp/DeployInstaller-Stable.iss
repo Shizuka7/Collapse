@@ -42,7 +42,6 @@ OutputBaseFilename=CL-{#AppVersion}_Installer
 
 [Icons]
 Name: "{group}\Collapse Launcher\Collapse"; Filename: "{app}\CollapseLauncher.exe"; WorkingDir: "{app}"; IconFilename: "{app}\CollapseLauncher.exe"; IconIndex: 0
-Name: "{group}\Collapse Launcher\Collapse (Hi3 Cache Updater)"; Filename: "{app}\CollapseLauncher.exe"; WorkingDir: "{app}"; IconFilename: "{app}\CollapseLauncher.exe"; IconIndex: 0; Parameters: "hi3cacheupdate"
 Name: "{userdesktop}\Collapse"; Filename: "{app}\CollapseLauncher.exe"; WorkingDir: "{app}"; IconFilename: "{app}\CollapseLauncher.exe"; IconIndex: 0
 
 [Files]
@@ -54,4 +53,8 @@ Source: "..\..\CollapseLauncher-ReleaseRepo\CollapseLauncher.exe"; DestDir: "{ap
 Name: StartAfterInstall; Description: Run application after install
 
 [Run]
-Filename: "{app}\CollapseLauncher.exe"; Description: "Launch Collapse"; Tasks: StartAfterInstall; Flags: postinstall nowait skipifsilent runascurrentuser
+Filename: "{app}\CollapseLauncher.exe"; Description: "Launch Collapse"; Tasks: StartAfterInstall; Flags: postinstall nowait skipifsilent runascurrentuser;
+
+[Registry]
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\Collapse"; ValueType: string; ValueName: "AppUserModelId"; ValueData: "Collapse.CollapseLauncher"; Flags: uninsdeletekeyifempty uninsdeletevalue;
+Root: HKCR; SubKey: "collapse"; ValueType: string; ValueData: "CollapseLauncher protocol"; Flags: createvalueifdoesntexist uninsdeletekey

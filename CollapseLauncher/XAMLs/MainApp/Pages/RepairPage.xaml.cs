@@ -1,20 +1,20 @@
-﻿using CollapseLauncher.Statics;
-using Hi3Helper;
-#if !DISABLEDISCORD
-using Hi3Helper.DiscordPresence;
+﻿#if !DISABLEDISCORD
+    using CollapseLauncher.DiscordPresence;
 #endif
-using Hi3Helper.Shared.ClassStruct;
-using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using System;
-using System.Threading.Tasks;
-using static CollapseLauncher.Statics.GamePropertyVault;
-using static Hi3Helper.Locale;
-using static Hi3Helper.Logger;
-using static Hi3Helper.Shared.Region.LauncherConfig;
+    using CollapseLauncher.Statics;
+    using Hi3Helper;
+    using Hi3Helper.Shared.ClassStruct;
+    using Microsoft.UI.Xaml;
+    using Microsoft.UI.Xaml.Controls;
+    using Microsoft.UI.Xaml.Controls.Primitives;
+    using System;
+    using System.Threading.Tasks;
+    using static CollapseLauncher.Statics.GamePropertyVault;
+    using static Hi3Helper.Locale;
+    using static Hi3Helper.Logger;
+    using static Hi3Helper.Shared.Region.LauncherConfig;
 
-namespace CollapseLauncher.Pages
+    namespace CollapseLauncher.Pages
 {
     public sealed partial class RepairPage : Page
     {
@@ -24,9 +24,6 @@ namespace CollapseLauncher.Pages
             CurrentGameProperty = GetCurrentGameProperty();
             BackgroundImgChanger.ToggleBackground(true);
             this.InitializeComponent();
-#if !DISABLEDISCORD
-            AppDiscordPresence.SetActivity(ActivityType.Repair);
-#endif
         }
 
         private void StartGameCheckSplitButton(SplitButton sender, SplitButtonClickEventArgs args)
@@ -47,6 +44,8 @@ namespace CollapseLauncher.Pages
 
         private async void RunCheckRoutine(object sender, bool isFast, bool isMainButton)
         {
+            InvokeProp.PreventSleep();
+            
             CheckFilesBtn.Flyout.Hide();
             CheckFilesBtn.IsEnabled = false;
             CancelBtn.IsEnabled = true;
@@ -85,11 +84,13 @@ namespace CollapseLauncher.Pages
             finally
             {
                 RemoveEvent();
+                InvokeProp.RestoreSleep();
             }
         }
 
         private async void StartGameRepair(object sender, RoutedEventArgs e)
         {
+            InvokeProp.PreventSleep();
             RepairFilesBtn.IsEnabled = false;
             CancelBtn.IsEnabled = true;
 
@@ -122,6 +123,7 @@ namespace CollapseLauncher.Pages
             finally
             {
                 RemoveEvent();
+                InvokeProp.RestoreSleep();
             }
         }
 
@@ -156,7 +158,7 @@ namespace CollapseLauncher.Pages
 
         private void _repairTool_StatusChanged(object sender, TotalPerfileStatus e)
         {
-            DispatcherQueue.TryEnqueue(() =>
+            DispatcherQueue?.TryEnqueue(() =>
             {
                 RepairDataTableGrid.Visibility = e.IsAssetEntryPanelShow ? Visibility.Visible : Visibility.Collapsed;
                 RepairStatus.Text = e.ActivityStatus;
@@ -170,11 +172,9 @@ namespace CollapseLauncher.Pages
 
         private void _repairTool_ProgressChanged(object sender, TotalPerfileProgress e)
         {
-            DispatcherQueue.TryEnqueue(() =>
+            DispatcherQueue?.TryEnqueue(() =>
             {
-                double percentage = double.IsInfinity(e.ProgressPerFilePercentage) ? 0 : e.ProgressPerFilePercentage;
-                RepairPerFileProgressBar.Value = percentage;
-
+                RepairPerFileProgressBar.Value = e.ProgressPerFilePercentage;
                 RepairTotalProgressBar.Value = e.ProgressTotalPercentage;
             });
         }
@@ -203,6 +203,7 @@ namespace CollapseLauncher.Pages
         {
             if (GameInstallationState == GameInstallStateEnum.NotInstalled
                 || GameInstallationState == GameInstallStateEnum.NeedsUpdate
+                || GameInstallationState == GameInstallStateEnum.InstalledHavePlugin
                 || GameInstallationState == GameInstallStateEnum.GameBroken)
             {
                 Overlay.Visibility = Visibility.Visible;
@@ -216,6 +217,12 @@ namespace CollapseLauncher.Pages
                 PageContent.Visibility = Visibility.Collapsed;
                 OverlayTitle.Text = Lang._GameRepairPage.OverlayGameRunningTitle;
                 OverlaySubtitle.Text = Lang._GameRepairPage.OverlayGameRunningSubtitle;
+            }
+            else
+            {
+#if !DISABLEDISCORD
+                InnerLauncherConfig.AppDiscordPresence.SetActivity(ActivityType.Repair);
+#endif
             }
         }
     }

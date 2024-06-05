@@ -1,6 +1,6 @@
-﻿using CommunityToolkit.WinUI.UI.Controls;
+﻿using CollapseLauncher.Helper.Update;
+using CommunityToolkit.Labs.WinUI.Labs.MarkdownTextBlock;
 using Hi3Helper;
-using Hi3Helper.Http;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Squirrel;
@@ -10,7 +10,6 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using static CollapseLauncher.InnerLauncherConfig;
 using static CollapseLauncher.Dialogs.SimpleDialogs;
 using static Hi3Helper.Locale;
 using static Hi3Helper.Shared.Region.LauncherConfig;
@@ -20,6 +19,7 @@ namespace CollapseLauncher.Pages
     public sealed partial class UpdatePage : Page
     {
         private CancellationTokenSource _tokenSource = new CancellationTokenSource();
+        private MarkdownConfig _markdownConfig = new MarkdownConfig();
 
         public UpdatePage()
         {
@@ -35,22 +35,25 @@ namespace CollapseLauncher.Pages
             ChangeTitleDragArea.Change(DragAreaTemplate.Full);
 
             string ChannelName = IsPreview ? Lang._Misc.BuildChannelPreview : Lang._Misc.BuildChannelStable;
-            CurrentVersionLabel.Text = $"{AppCurrentVersion.VersionString}";
+            CurrentVersionLabel.Text = $"{LauncherUpdateHelper.LauncherCurrentVersionString}";
 
-            GameVersion NewUpdateVersion = new GameVersion(LauncherUpdateWatcher.UpdateProperty.ver);
+            if (!LauncherUpdateHelper.AppUpdateVersionProp?.Version.HasValue ?? false)
+                throw new NullReferenceException($"New version property in LauncherUpdateHelper.AppUpdateVersionProp should haven't be null!");
+
+            GameVersion NewUpdateVersion = LauncherUpdateHelper.AppUpdateVersionProp.Version.Value;
 
             NewVersionLabel.Text = NewUpdateVersion.VersionString;
             UpdateChannelLabel.Text = ChannelName;
             AskUpdateCheckbox.IsChecked = GetAppConfigValue("DontAskUpdate").ToBoolNullable() ?? false;
-            BuildTimestampLabel.Text = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
-                                        .AddSeconds(LauncherUpdateWatcher.UpdateProperty.time)
-                                        .ToLocalTime().ToString("f");
+            BuildTimestampLabel.Text = LauncherUpdateHelper.AppUpdateVersionProp?.TimeLocalTime?.ToString("f");
 
             await GetReleaseNote();
 
             try
             {
-                await WaitForCountdown();
+                if (!(LauncherUpdateHelper.AppUpdateVersionProp?.IsForceUpdate ?? false))
+                    await WaitForCountdown();
+
                 await StartUpdateRoutine();
             }
             catch (TaskCanceledException)
@@ -68,7 +71,7 @@ namespace CollapseLauncher.Pages
         {
             try
             {
-                if (LauncherUpdateWatcher.isMetered)
+                if (LauncherUpdateWatcher.isMetered && !(LauncherUpdateHelper.AppUpdateVersionProp?.IsForceUpdate ?? false))
                 {
                     switch (await Dialog_MeteredConnectionWarning(Content))
                     {
@@ -82,7 +85,7 @@ namespace CollapseLauncher.Pages
                             return;
                     }
                 }
-                
+
                 await _StartUpdateRoutine();
             }
             catch (OperationCanceledException)
@@ -110,7 +113,7 @@ namespace CollapseLauncher.Pages
             // Start Squirrel update routine
             await GetSquirrelUpdate();
         }
-        
+
         private async Task GetSquirrelUpdate()
         {
             string ChannelName = IsPreview ? "Preview" : "Stable";
@@ -188,7 +191,7 @@ namespace CollapseLauncher.Pages
 
         private void Updater_UpdaterStatusChanged(object sender, Updater.UpdaterStatus e)
         {
-            DispatcherQueue.TryEnqueue(() =>
+            DispatcherQueue?.TryEnqueue(() =>
             {
                 Status.Text = e.status;
                 if (!string.IsNullOrEmpty(e.newver))
@@ -201,41 +204,11 @@ namespace CollapseLauncher.Pages
 
         private void Updater_UpdaterProgressChanged(object sender, Updater.UpdaterProgress e)
         {
-            DispatcherQueue.TryEnqueue(() =>
+            DispatcherQueue?.TryEnqueue(() =>
             {
                 progressBar.IsIndeterminate = false;
                 progressBar.Value = e.ProgressPercentage;
                 TimeEstimation.Text = string.Format(Lang._Misc.TimeRemainHMSFormat, e.TimeLeft);
-            });
-        }
-
-        private async void ReleaseNotesBox_LinkClicked(object sender, LinkClickedEventArgs e)
-        {
-            await Task.Run(() =>
-            {
-                new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        UseShellExecute = true,
-                        FileName = e.Link
-                    }
-                }.Start();
-            });
-        }
-
-        private async void ReleaseNotesBox_ImageClicked(object sender, LinkClickedEventArgs e)
-        {
-            await Task.Run(() =>
-            {
-                new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        UseShellExecute = true,
-                        FileName = e.Link
-                    }
-                }.Start();
             });
         }
     }

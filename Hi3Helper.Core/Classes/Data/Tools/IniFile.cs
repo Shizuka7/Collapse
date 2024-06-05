@@ -2,7 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -18,8 +20,8 @@ namespace Hi3Helper.Data
         {
             int res;
             if (int.TryParse(text,
-                System.Globalization.NumberStyles.Integer,
-                System.Globalization.CultureInfo.InvariantCulture,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
                 out res))
             {
                 value = res;
@@ -33,8 +35,8 @@ namespace Hi3Helper.Data
         {
             uint res;
             if (uint.TryParse(text,
-                System.Globalization.NumberStyles.Integer,
-                System.Globalization.CultureInfo.InvariantCulture,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
                 out res))
             {
                 value = res;
@@ -48,8 +50,8 @@ namespace Hi3Helper.Data
         {
             double res;
             if (double.TryParse(text,
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
                 out res))
             {
                 value = res;
@@ -63,8 +65,8 @@ namespace Hi3Helper.Data
         {
             float res;
             if (float.TryParse(text,
-                System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
                 out res))
             {
                 value = res;
@@ -81,7 +83,7 @@ namespace Hi3Helper.Data
             var formattable = value as IFormattable;
             if (formattable != null)
             {
-                Value = formattable.ToString(null, System.Globalization.CultureInfo.InvariantCulture);
+                Value = formattable.ToString(null, CultureInfo.InvariantCulture);
             }
             else
             {
@@ -95,7 +97,7 @@ namespace Hi3Helper.Data
 
         public Size ToSize()
         {
-            Span<string> vs = Value.Split('x');
+            Span<string> vs = Value!.Split('x');
             int width;
             int height;
             int.TryParse(vs[0], out width);
@@ -229,7 +231,7 @@ namespace Hi3Helper.Data
             if (Value == null)
             {
                 result = default(float);
-                return false; ;
+                return false;
             }
             if (TryParseFloat(Value.Trim(), out result))
             {
@@ -253,7 +255,7 @@ namespace Hi3Helper.Data
             if (Value == null)
             {
                 result = default(double);
-                return false; ;
+                return false;
             }
             if (TryParseDouble(Value.Trim(), out result))
             {
@@ -310,6 +312,7 @@ namespace Hi3Helper.Data
         public static IniValue Default => _default;
     }
 
+    [SuppressMessage("ReSharper", "RedundantStringFormatCall")]
     public class IniFile : IDictionary<string, IniSection>
     {
         public IEqualityComparer<string> StringComparer;
@@ -330,7 +333,7 @@ namespace Hi3Helper.Data
 
         public void Save(string path, FileMode mode = FileMode.Create)
         {
-            using (var stream = new FileStream(path, mode, FileAccess.Write))
+            using (var stream = new FileStream(path!, mode, FileAccess.Write))
             {
                 Save(stream);
             }
@@ -338,7 +341,7 @@ namespace Hi3Helper.Data
 
         public void Save(Stream stream)
         {
-            using (var writer = new StreamWriter(stream))
+            using (var writer = new StreamWriter(stream!))
             {
                 Save(writer);
             }
@@ -346,11 +349,11 @@ namespace Hi3Helper.Data
 
         private void Save(StreamWriter writer)
         {
-            foreach (var section in sections)
+            foreach (var section in sections!)
             {
-                if (section.Value.Count > 0 || SaveEmptySections)
+                if (section.Value!.Count > 0 || SaveEmptySections)
                 {
-                    writer.WriteLine(string.Format("[{0}]", section.Key.Trim()));
+                    writer!.WriteLine(string.Format("[{0}]", section.Key!.Trim()));
                     foreach (var kvp in section.Value)
                     {
                         writer.WriteLine(string.Format("{0}={1}", kvp.Key, kvp.Value));
@@ -361,7 +364,7 @@ namespace Hi3Helper.Data
 
         public void Load(string path, bool ordered = false, bool openOrCreate = false)
         {
-            using (var stream = new FileStream(path, openOrCreate ? FileMode.OpenOrCreate : FileMode.Open, FileAccess.Read))
+            using (var stream = new FileStream(path!, openOrCreate ? FileMode.OpenOrCreate : FileMode.Open, FileAccess.Read))
             {
                 Load(stream, ordered);
             }
@@ -369,7 +372,7 @@ namespace Hi3Helper.Data
 
         public void Load(Stream stream, bool ordered)
         {
-            using (var reader = new StreamReader(stream))
+            using (var reader = new StreamReader(stream!))
             {
                 Load(reader, ordered);
             }
@@ -379,7 +382,7 @@ namespace Hi3Helper.Data
         {
             IniSection section = null;
 
-            while (!reader.EndOfStream)
+            while (!reader!.EndOfStream)
             {
                 var line = reader.ReadLine();
 
@@ -396,7 +399,7 @@ namespace Hi3Helper.Data
                             {
                                 var sectionName = trimStart.Substring(1, sectionEnd - 1).Trim();
                                 section = new IniSection(StringComparer) { Ordered = ordered };
-                                sections[sectionName] = section;
+                                sections![sectionName] = section;
                             }
                         }
                         else if (section != null && trimStart[0] != ';')
@@ -406,7 +409,7 @@ namespace Hi3Helper.Data
 
                             if (LoadValue(line, out key, out val))
                             {
-                                section[key] = val;
+                                section[key!] = val;
                             }
                         }
                     }
@@ -416,7 +419,7 @@ namespace Hi3Helper.Data
 
         private bool LoadValue(string line, out string key, out IniValue val)
         {
-            var assignIndex = line.IndexOf('=');
+            var assignIndex = line!.IndexOf('=');
             if (assignIndex <= 0)
             {
                 key = null;
@@ -431,31 +434,31 @@ namespace Hi3Helper.Data
             return true;
         }
 
-        public bool ContainsSection(string section) => sections.ContainsKey(section);
+        public bool ContainsSection(string section) => sections!.ContainsKey(section!);
 
-        public bool TryGetSection(string section, out IniSection result) => sections.TryGetValue(section, out result);
+        public bool TryGetSection(string section, out IniSection result) => sections!.TryGetValue(section!, out result);
 
         bool IDictionary<string, IniSection>.TryGetValue(string key, out IniSection value) => TryGetSection(key, out value);
 
-        public bool Remove(string section) => sections.Remove(section);
+        public bool Remove(string section) => sections!.Remove(section!);
 
         public IniSection Add(string section, Dictionary<string, IniValue> values, bool ordered = false) =>
             Add(section, new IniSection(values, StringComparer) { Ordered = ordered });
 
         public IniSection Add(string section, IniSection value)
         {
-            if (value.Comparer != StringComparer)
+            if (value!.Comparer != StringComparer)
             {
                 value = new IniSection(value, StringComparer);
             }
-            sections.Add(section, value);
+            sections!.Add(section!, value);
             return value;
         }
 
         public IniSection Add(string section, bool ordered = false)
         {
             var value = new IniSection(StringComparer) { Ordered = ordered };
-            sections.Add(section, value);
+            sections!.Add(section!, value);
             return value;
         }
 
@@ -463,25 +466,25 @@ namespace Hi3Helper.Data
 
         bool IDictionary<string, IniSection>.ContainsKey(string key) => ContainsSection(key);
 
-        public ICollection<string> Keys => sections.Keys;
+        public ICollection<string> Keys => sections!.Keys;
 
-        public ICollection<IniSection> Values => sections.Values;
+        public ICollection<IniSection> Values => sections!.Values;
 
-        void ICollection<KeyValuePair<string, IniSection>>.Add(KeyValuePair<string, IniSection> item) => sections.Add(item);
+        void ICollection<KeyValuePair<string, IniSection>>.Add(KeyValuePair<string, IniSection> item) => sections!.Add(item);
 
-        public void Clear() => sections.Clear();
+        public void Clear() => sections!.Clear();
 
-        bool ICollection<KeyValuePair<string, IniSection>>.Contains(KeyValuePair<string, IniSection> item) => sections.Contains(item);
+        bool ICollection<KeyValuePair<string, IniSection>>.Contains(KeyValuePair<string, IniSection> item) => sections!.Contains(item);
 
-        void ICollection<KeyValuePair<string, IniSection>>.CopyTo(KeyValuePair<string, IniSection>[] array, int arrayIndex) => sections.CopyTo(array, arrayIndex);
+        void ICollection<KeyValuePair<string, IniSection>>.CopyTo(KeyValuePair<string, IniSection>[] array, int arrayIndex) => sections!.CopyTo(array, arrayIndex);
 
-        public int Count => sections.Count;
+        public int Count => sections!.Count;
 
-        bool ICollection<KeyValuePair<string, IniSection>>.IsReadOnly => sections.IsReadOnly;
+        bool ICollection<KeyValuePair<string, IniSection>>.IsReadOnly => sections!.IsReadOnly;
 
-        bool ICollection<KeyValuePair<string, IniSection>>.Remove(KeyValuePair<string, IniSection> item) => sections.Remove(item);
+        bool ICollection<KeyValuePair<string, IniSection>>.Remove(KeyValuePair<string, IniSection> item) => sections!.Remove(item);
 
-        public IEnumerator<KeyValuePair<string, IniSection>> GetEnumerator() => sections.GetEnumerator();
+        public IEnumerator<KeyValuePair<string, IniSection>> GetEnumerator() => sections!.GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -490,7 +493,7 @@ namespace Hi3Helper.Data
             get
             {
                 IniSection s;
-                if (sections.TryGetValue(section, out s))
+                if (sections!.TryGetValue(section, out s))
                 {
                     return s;
                 }
@@ -501,11 +504,11 @@ namespace Hi3Helper.Data
             set
             {
                 var v = value;
-                if (v.Comparer != StringComparer)
+                if (v!.Comparer != StringComparer)
                 {
                     v = new IniSection(v, StringComparer);
                 }
-                sections[section] = v;
+                sections![section] = v;
             }
         }
 
@@ -524,7 +527,7 @@ namespace Hi3Helper.Data
 
         class CaseInsensitiveStringComparer : IEqualityComparer<string>
         {
-            public bool Equals(string x, string y) => string.Compare(x, y, true) == 0;
+            public bool Equals(string x, string y) => String.Compare(x, y, StringComparison.OrdinalIgnoreCase) == 0;
 
             public int GetHashCode(string obj) => obj.ToLowerInvariant().GetHashCode();
         }
@@ -543,7 +546,7 @@ namespace Hi3Helper.Data
             {
                 throw new InvalidOperationException("Cannot call IndexOf(string) on IniSection: section was not ordered.");
             }
-            return IndexOf(key, 0, orderedKeys.Count);
+            return IndexOf(key, 0, orderedKeys!.Count);
         }
 
         public int IndexOf(string key, int index)
@@ -552,7 +555,7 @@ namespace Hi3Helper.Data
             {
                 throw new InvalidOperationException("Cannot call IndexOf(string, int) on IniSection: section was not ordered.");
             }
-            return IndexOf(key, index, orderedKeys.Count - index);
+            return IndexOf(key, index, orderedKeys!.Count - index);
         }
 
         public int IndexOf(string key, int index, int count)
@@ -561,7 +564,7 @@ namespace Hi3Helper.Data
             {
                 throw new InvalidOperationException("Cannot call IndexOf(string, int, int) on IniSection: section was not ordered.");
             }
-            if (index < 0 || index > orderedKeys.Count)
+            if (index < 0 || index > orderedKeys!.Count)
             {
                 throw new IndexOutOfRangeException("Index must be within the bounds." + Environment.NewLine + "Parameter name: index");
             }
@@ -576,7 +579,7 @@ namespace Hi3Helper.Data
             var end = index + count;
             for (int i = index; i < end; i++)
             {
-                if (Comparer.Equals(orderedKeys[i], key))
+                if (Comparer!.Equals(orderedKeys[i], key))
                 {
                     return i;
                 }
@@ -590,7 +593,7 @@ namespace Hi3Helper.Data
             {
                 throw new InvalidOperationException("Cannot call LastIndexOf(string) on IniSection: section was not ordered.");
             }
-            return LastIndexOf(key, 0, orderedKeys.Count);
+            return LastIndexOf(key, 0, orderedKeys!.Count);
         }
 
         public int LastIndexOf(string key, int index)
@@ -599,7 +602,7 @@ namespace Hi3Helper.Data
             {
                 throw new InvalidOperationException("Cannot call LastIndexOf(string, int) on IniSection: section was not ordered.");
             }
-            return LastIndexOf(key, index, orderedKeys.Count - index);
+            return LastIndexOf(key, index, orderedKeys!.Count - index);
         }
 
         public int LastIndexOf(string key, int index, int count)
@@ -608,7 +611,7 @@ namespace Hi3Helper.Data
             {
                 throw new InvalidOperationException("Cannot call LastIndexOf(string, int, int) on IniSection: section was not ordered.");
             }
-            if (index < 0 || index > orderedKeys.Count)
+            if (index < 0 || index > orderedKeys!.Count)
             {
                 throw new IndexOutOfRangeException("Index must be within the bounds." + Environment.NewLine + "Parameter name: index");
             }
@@ -623,7 +626,7 @@ namespace Hi3Helper.Data
             var end = index + count;
             for (int i = end - 1; i >= index; i--)
             {
-                if (Comparer.Equals(orderedKeys[i], key))
+                if (Comparer!.Equals(orderedKeys[i], key))
                 {
                     return i;
                 }
@@ -637,11 +640,11 @@ namespace Hi3Helper.Data
             {
                 throw new InvalidOperationException("Cannot call Insert(int, string, IniValue) on IniSection: section was not ordered.");
             }
-            if (index < 0 || index > orderedKeys.Count)
+            if (index < 0 || index > orderedKeys!.Count)
             {
                 throw new IndexOutOfRangeException("Index must be within the bounds." + Environment.NewLine + "Parameter name: index");
             }
-            values.Add(key, value);
+            values!.Add(key!, value);
             orderedKeys.Insert(index, key);
         }
 
@@ -655,7 +658,7 @@ namespace Hi3Helper.Data
             {
                 throw new ArgumentNullException("Value cannot be null." + Environment.NewLine + "Parameter name: collection");
             }
-            if (index < 0 || index > orderedKeys.Count)
+            if (index < 0 || index > orderedKeys!.Count)
             {
                 throw new IndexOutOfRangeException("Index must be within the bounds." + Environment.NewLine + "Parameter name: index");
             }
@@ -672,13 +675,13 @@ namespace Hi3Helper.Data
             {
                 throw new InvalidOperationException("Cannot call RemoveAt(int) on IniSection: section was not ordered.");
             }
-            if (index < 0 || index > orderedKeys.Count)
+            if (index < 0 || index > orderedKeys!.Count)
             {
                 throw new IndexOutOfRangeException("Index must be within the bounds." + Environment.NewLine + "Parameter name: index");
             }
             var key = orderedKeys[index];
-            orderedKeys.RemoveAt(index);
-            values.Remove(key);
+            orderedKeys!.RemoveAt(index);
+            values!.Remove(key!);
         }
 
         public void RemoveRange(int index, int count)
@@ -687,7 +690,7 @@ namespace Hi3Helper.Data
             {
                 throw new InvalidOperationException("Cannot call RemoveRange(int, int) on IniSection: section was not ordered.");
             }
-            if (index < 0 || index > orderedKeys.Count)
+            if (index < 0 || index > orderedKeys!.Count)
             {
                 throw new IndexOutOfRangeException("Index must be within the bounds." + Environment.NewLine + "Parameter name: index");
             }
@@ -695,7 +698,7 @@ namespace Hi3Helper.Data
             {
                 throw new IndexOutOfRangeException("Count cannot be less than zero." + Environment.NewLine + "Parameter name: count");
             }
-            if (index + count > orderedKeys.Count)
+            if (index + count > orderedKeys!.Count)
             {
                 throw new ArgumentException("Index and count were out of bounds for the array or count is greater than the number of elements from index to the end of the source collection.");
             }
@@ -711,7 +714,7 @@ namespace Hi3Helper.Data
             {
                 throw new InvalidOperationException("Cannot call Reverse() on IniSection: section was not ordered.");
             }
-            orderedKeys.Reverse();
+            orderedKeys!.Reverse();
         }
 
         public void Reverse(int index, int count)
@@ -720,7 +723,7 @@ namespace Hi3Helper.Data
             {
                 throw new InvalidOperationException("Cannot call Reverse(int, int) on IniSection: section was not ordered.");
             }
-            if (index < 0 || index > orderedKeys.Count)
+            if (index < 0 || index > orderedKeys!.Count)
             {
                 throw new IndexOutOfRangeException("Index must be within the bounds." + Environment.NewLine + "Parameter name: index");
             }
@@ -728,11 +731,11 @@ namespace Hi3Helper.Data
             {
                 throw new IndexOutOfRangeException("Count cannot be less than zero." + Environment.NewLine + "Parameter name: count");
             }
-            if (index + count > orderedKeys.Count)
+            if (index + count > orderedKeys!.Count)
             {
                 throw new ArgumentException("Index and count were out of bounds for the array or count is greater than the number of elements from index to the end of the source collection.");
             }
-            orderedKeys.Reverse(index, count);
+            orderedKeys!.Reverse(index, count);
         }
 
         public ICollection<IniValue> GetOrderedValues()
@@ -742,9 +745,9 @@ namespace Hi3Helper.Data
                 throw new InvalidOperationException("Cannot call GetOrderedValues() on IniSection: section was not ordered.");
             }
             var list = new List<IniValue>();
-            for (int i = 0; i < orderedKeys.Count; i++)
+            for (int i = 0; i < orderedKeys!.Count; i++)
             {
-                list.Add(values[orderedKeys[i]]);
+                list.Add(values![orderedKeys[i]!]);
             }
             return list;
         }
@@ -757,11 +760,11 @@ namespace Hi3Helper.Data
                 {
                     throw new InvalidOperationException("Cannot index IniSection using integer key: section was not ordered.");
                 }
-                if (index < 0 || index >= orderedKeys.Count)
+                if (index < 0 || index >= orderedKeys!.Count)
                 {
                     throw new IndexOutOfRangeException("Index must be within the bounds." + Environment.NewLine + "Parameter name: index");
                 }
-                return values[orderedKeys[index]];
+                return values![orderedKeys[index]!];
             }
             set
             {
@@ -769,12 +772,12 @@ namespace Hi3Helper.Data
                 {
                     throw new InvalidOperationException("Cannot index IniSection using integer key: section was not ordered.");
                 }
-                if (index < 0 || index >= orderedKeys.Count)
+                if (index < 0 || index >= orderedKeys!.Count)
                 {
                     throw new IndexOutOfRangeException("Index must be within the bounds." + Environment.NewLine + "Parameter name: index");
                 }
                 var key = orderedKeys[index];
-                values[key] = value;
+                values![key!] = value;
             }
         }
 
@@ -788,7 +791,7 @@ namespace Hi3Helper.Data
             {
                 if (Ordered != value)
                 {
-                    orderedKeys = value ? new List<string>(values.Keys) : null;
+                    orderedKeys = value ? new List<string>(values!.Keys) : null;
                 }
             }
         }
@@ -801,7 +804,7 @@ namespace Hi3Helper.Data
 
         public IniSection(IEqualityComparer<string> stringComparer)
         {
-            this.values = new Dictionary<string, IniValue>(stringComparer);
+            values = new Dictionary<string, IniValue>(stringComparer);
         }
 
         public IniSection(Dictionary<string, IniValue> values)
@@ -811,7 +814,7 @@ namespace Hi3Helper.Data
 
         public IniSection(Dictionary<string, IniValue> values, IEqualityComparer<string> stringComparer)
         {
-            this.values = new Dictionary<string, IniValue>(values, stringComparer);
+            this.values = new Dictionary<string, IniValue>(values!, stringComparer);
         }
 
         public IniSection(IniSection values)
@@ -821,35 +824,35 @@ namespace Hi3Helper.Data
 
         public IniSection(IniSection values, IEqualityComparer<string> stringComparer)
         {
-            this.values = new Dictionary<string, IniValue>(values.values, stringComparer);
+            this.values = new Dictionary<string, IniValue>(values!.values!, stringComparer);
         }
 
         public void Add(string key, IniValue value)
         {
-            values.Add(key, value);
+            values!.Add(key, value);
             if (Ordered)
             {
-                orderedKeys.Add(key);
+                orderedKeys!.Add(key);
             }
         }
 
-        public bool ContainsKey(string key) => values.ContainsKey(key);
+        public bool ContainsKey(string key) => values!.ContainsKey(key);
 
         /// <summary>
         /// Returns this IniSection's collection of keys. If the IniSection is ordered, the keys will be returned in order.
         /// </summary>
-        public ICollection<string> Keys => Ordered ? orderedKeys as ICollection<string> : values.Keys;
+        public ICollection<string> Keys => (Ordered ? orderedKeys : values!.Keys!)!;
 
         public bool Remove(string key)
         {
-            var ret = values.Remove(key);
+            var ret = values!.Remove(key);
             if (Ordered && ret)
             {
-                for (int i = 0; i < orderedKeys.Count; i++)
+                for (int i = 0; i < orderedKeys!.Count; i++)
                 {
-                    if (Comparer.Equals(orderedKeys[i], key))
+                    if (Comparer!.Equals(orderedKeys[i], key))
                     {
-                        orderedKeys.RemoveAt(i);
+                        orderedKeys!.RemoveAt(i);
                         break;
                     }
                 }
@@ -857,50 +860,50 @@ namespace Hi3Helper.Data
             return ret;
         }
 
-        public bool TryGetValue(string key, out IniValue value) => values.TryGetValue(key, out value);
+        public bool TryGetValue(string key, out IniValue value) => values!.TryGetValue(key, out value);
 
         /// <summary>
         /// Returns the values in this IniSection. These values are always out of order. To get ordered values from an IniSection call GetOrderedValues instead.
         /// </summary>
-        public ICollection<IniValue> Values => values.Values;
+        public ICollection<IniValue> Values => values!.Values;
 
         void ICollection<KeyValuePair<string, IniValue>>.Add(KeyValuePair<string, IniValue> item)
         {
-            ((IDictionary<string, IniValue>)values).Add(item);
+            ((IDictionary<string, IniValue>)values!).Add(item);
             if (Ordered)
             {
-                orderedKeys.Add(item.Key);
+                orderedKeys!.Add(item.Key);
             }
         }
 
         public void Clear()
         {
-            values.Clear();
+            values!.Clear();
             if (Ordered)
             {
-                orderedKeys.Clear();
+                orderedKeys!.Clear();
             }
         }
 
-        bool ICollection<KeyValuePair<string, IniValue>>.Contains(KeyValuePair<string, IniValue> item) => ((IDictionary<string, IniValue>)values).Contains(item);
+        bool ICollection<KeyValuePair<string, IniValue>>.Contains(KeyValuePair<string, IniValue> item) => ((IDictionary<string, IniValue>)values)!.Contains(item);
 
         void ICollection<KeyValuePair<string, IniValue>>.CopyTo(KeyValuePair<string, IniValue>[] array, int arrayIndex) =>
-            ((IDictionary<string, IniValue>)values).CopyTo(array, arrayIndex);
+            ((IDictionary<string, IniValue>)values!).CopyTo(array, arrayIndex);
 
-        public int Count => values.Count;
+        public int Count => values!.Count;
 
-        bool ICollection<KeyValuePair<string, IniValue>>.IsReadOnly => ((IDictionary<string, IniValue>)values).IsReadOnly;
+        bool ICollection<KeyValuePair<string, IniValue>>.IsReadOnly => ((IDictionary<string, IniValue>)values!).IsReadOnly;
 
         bool ICollection<KeyValuePair<string, IniValue>>.Remove(KeyValuePair<string, IniValue> item)
         {
-            var ret = ((IDictionary<string, IniValue>)values).Remove(item);
+            var ret = ((IDictionary<string, IniValue>)values!).Remove(item);
             if (Ordered && ret)
             {
-                for (int i = 0; i < orderedKeys.Count; i++)
+                for (int i = 0; i < orderedKeys!.Count; i++)
                 {
-                    if (Comparer.Equals(orderedKeys[i], item.Key))
+                    if (Comparer!.Equals(orderedKeys[i], item.Key))
                     {
-                        orderedKeys.RemoveAt(i);
+                        orderedKeys!.RemoveAt(i);
                         break;
                     }
                 }
@@ -908,26 +911,26 @@ namespace Hi3Helper.Data
             return ret;
         }
 
-        public IEnumerator<KeyValuePair<string, IniValue>> GetEnumerator() => Ordered ? GetOrderedEnumerator() : values.GetEnumerator();
+        public IEnumerator<KeyValuePair<string, IniValue>> GetEnumerator() => (Ordered ? GetOrderedEnumerator() : values!.GetEnumerator())!;
 
         private IEnumerator<KeyValuePair<string, IniValue>> GetOrderedEnumerator()
         {
-            for (int i = 0; i < orderedKeys.Count; i++)
+            for (int i = 0; i < orderedKeys!.Count; i++)
             {
-                yield return new KeyValuePair<string, IniValue>(orderedKeys[i], values[orderedKeys[i]]);
+                yield return new KeyValuePair<string, IniValue>(orderedKeys[i], values![orderedKeys[i]!]);
             }
         }
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        public IEqualityComparer<string> Comparer => values.Comparer;
+        public IEqualityComparer<string> Comparer => values!.Comparer;
 
         public IniValue this[string name]
         {
             get
             {
                 IniValue val;
-                if (values.TryGetValue(name, out val))
+                if (values!.TryGetValue(name, out val))
                 {
                     return val;
                 }
@@ -935,16 +938,16 @@ namespace Hi3Helper.Data
             }
             set
             {
-                if (Ordered && !orderedKeys.Contains(name, Comparer))
+                if (Ordered && !orderedKeys!.Contains(name, Comparer))
                 {
-                    orderedKeys.Add(name);
+                    orderedKeys!.Add(name);
                 }
-                values[name] = value;
+                values![name] = value;
             }
         }
 
         public static implicit operator IniSection(Dictionary<string, IniValue> dict) => new IniSection(dict);
 
-        public static explicit operator Dictionary<string, IniValue>(IniSection section) => section.values;
+        public static explicit operator Dictionary<string, IniValue>(IniSection section) => section!.values;
     }
 }

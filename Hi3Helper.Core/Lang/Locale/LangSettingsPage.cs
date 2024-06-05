@@ -14,6 +14,7 @@
                 public string Debug_IncludeGameLogs                 { get; set; } = LangFallback?._SettingsPage.Debug_IncludeGameLogs;
                 public string Debug_MultipleInstance                { get; set; } = LangFallback?._SettingsPage.Debug_MultipleInstance;
                 public string ChangeRegionWarning_Toggle            { get; set; } = LangFallback?._SettingsPage.ChangeRegionWarning_Toggle;
+                public string ChangeRegionInstant_Toggle            { get; set; } = LangFallback?._SettingsPage.ChangeRegionInstant_Toggle;
                 public string ChangeRegionWarning_Warning           { get; set; } = LangFallback?._SettingsPage.ChangeRegionWarning_Warning;
                 public string Language                              { get; set; } = LangFallback?._SettingsPage.Language;
                 public string LanguageEntry                         { get; set; } = LangFallback?._SettingsPage.LanguageEntry;
@@ -39,9 +40,19 @@
                 public string AppThreads_Help4                      { get; set; } = LangFallback?._SettingsPage.AppThreads_Help4;
                 public string AppThreads_Help5                      { get; set; } = LangFallback?._SettingsPage.AppThreads_Help5;
                 public string AppThreads_Help6                      { get; set; } = LangFallback?._SettingsPage.AppThreads_Help6;
+                public string AppThreads_Attention                  { get; set; } = LangFallback?._SettingsPage.AppThreads_Attention;
+                public string AppThreads_Attention1                 { get; set; } = LangFallback?._SettingsPage.AppThreads_Attention1;
+                public string AppThreads_Attention2                 { get; set; } = LangFallback?._SettingsPage.AppThreads_Attention2;
+                public string AppThreads_Attention3                 { get; set; } = LangFallback?._SettingsPage.AppThreads_Attention3;
+                public string AppThreads_Attention4                 { get; set; } = LangFallback?._SettingsPage.AppThreads_Attention4;
+                public string AppThreads_Attention5                 { get; set; } = LangFallback?._SettingsPage.AppThreads_Attention5;
+                public string AppThreads_Attention6                 { get; set; } = LangFallback?._SettingsPage.AppThreads_Attention6;
                 public string DiscordRPC                            { get; set; } = LangFallback?._SettingsPage.DiscordRPC;
                 public string DiscordRPC_Toggle                     { get; set; } = LangFallback?._SettingsPage.DiscordRPC_Toggle;
                 public string DiscordRPC_GameStatusToggle           { get; set; } = LangFallback?._SettingsPage.DiscordRPC_GameStatusToggle;
+                public string DiscordRPC_IdleStatusToggle           { get; set; } = LangFallback?._SettingsPage.DiscordRPC_IdleStatusToggle;
+                public string VideoBackground_IsEnableAudio         { get; set; } = LangFallback?._SettingsPage.VideoBackground_IsEnableAudio;
+                public string VideoBackground_AudioVolume           { get; set; } = LangFallback?._SettingsPage.VideoBackground_AudioVolume;
                 public string Update                                { get; set; } = LangFallback?._SettingsPage.Update;
                 public string Update_CurVer                         { get; set; } = LangFallback?._SettingsPage.Update_CurVer;
                 public string Update_CheckBtn                       { get; set; } = LangFallback?._SettingsPage.Update_CheckBtn;
@@ -66,6 +77,7 @@
                 public string About_Copyright2                      { get; set; } = LangFallback?._SettingsPage.About_Copyright2;
                 public string About_Copyright3                      { get; set; } = LangFallback?._SettingsPage.About_Copyright3;
                 public string About_Copyright4                      { get; set; } = LangFallback?._SettingsPage.About_Copyright4;
+                public string MITLicense                            { get; set; } = LangFallback?._SettingsPage.MITLicense;
                 public string Disclaimer                            { get; set; } = LangFallback?._SettingsPage.Disclaimer;
                 public string Disclaimer1                           { get; set; } = LangFallback?._SettingsPage.Disclaimer1;
                 public string Disclaimer2                           { get; set; } = LangFallback?._SettingsPage.Disclaimer2;
@@ -77,7 +89,8 @@
                 public string EnableAcrylicEffect                   { get; set; } = LangFallback?._SettingsPage.EnableAcrylicEffect;
                 public string EnableDownloadChunksMerging           { get; set; } = LangFallback?._SettingsPage.EnableDownloadChunksMerging;
                 public string LowerCollapsePrioOnGameLaunch         { get; set; } = LangFallback?._SettingsPage.LowerCollapsePrioOnGameLaunch;
-                public string LowerCollapsePrioOnGameLaunch_Tooltip {get;  set;}  = LangFallback?._SettingsPage.LowerCollapsePrioOnGameLaunch_Tooltip;
+                public string LowerCollapsePrioOnGameLaunch_Tooltip { get; set; }  = LangFallback?._SettingsPage.LowerCollapsePrioOnGameLaunch_Tooltip;
+                public string UseExternalBrowser                    { get; set; } = LangFallback?._SettingsPage.UseExternalBrowser;
 				public string KbShortcuts_Title                     { get; set; } = LangFallback?._SettingsPage.KbShortcuts_Title;
                 public string KbShortcuts_ShowBtn                   { get; set; } = LangFallback?._SettingsPage.KbShortcuts_ShowBtn;
                 public string KbShortcuts_ResetBtn                  { get; set; } = LangFallback?._SettingsPage.KbShortcuts_ResetBtn;
@@ -89,6 +102,13 @@
                 public string AppBehavior_MinimizeToTray            { get; set; } = LangFallback?._SettingsPage.AppBehavior_MinimizeToTray;
                 public string AppBehavior_LaunchOnStartup           { get; set; } = LangFallback?._SettingsPage.AppBehavior_LaunchOnStartup;
                 public string AppBehavior_StartupToTray             { get; set; } = LangFallback?._SettingsPage.AppBehavior_StartupToTray;
+                public string Waifu2X_Toggle                        { get; set; } = LangFallback?._SettingsPage.Waifu2X_Toggle;
+                public string Waifu2X_Help                          { get; set; } = LangFallback?._SettingsPage.Waifu2X_Help;
+                public string Waifu2X_Help2                         { get; set; } = LangFallback?._SettingsPage.Waifu2X_Help2;
+                public string Waifu2X_Warning_CpuMode               { get; set; } = LangFallback?._SettingsPage.Waifu2X_Warning_CpuMode;
+                public string Waifu2X_Warning_D3DMappingLayers      { get; set; } = LangFallback?._SettingsPage.Waifu2X_Warning_D3DMappingLayers;
+                public string Waifu2X_Error_Loader                  { get; set; } = LangFallback?._SettingsPage.Waifu2X_Error_Loader;
+                public string Waifu2X_Error_Output                  { get; set; } = LangFallback?._SettingsPage.Waifu2X_Error_Output;
             }
         }
         #endregion

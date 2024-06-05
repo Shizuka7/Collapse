@@ -1,10 +1,19 @@
-﻿using System;
+﻿using Hi3Helper.Data;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using static Hi3Helper.Locale;
 using static Hi3Helper.Logger;
+#if !APPLYUPDATE
 using static Hi3Helper.Shared.Region.LauncherConfig;
+#else
+using ApplyUpdate;
+using Avalonia.Platform;
+using System.Linq;
+using System.Reflection;
+using static ApplyUpdate.Statics;
+#endif
 
 namespace Hi3Helper
 {
@@ -16,11 +25,11 @@ namespace Hi3Helper
             this.LangIndex = index;
             this.LangIsLoaded = false;
 
-            ReadOnlySpan<char> langRelativePath = filePath.AsSpan().Slice(AppLangFolder.Length + 1);
+            ReadOnlySpan<char> langRelativePath = filePath.AsSpan().Slice(AppLangFolder!.Length + 1);
 
             try
             {
-                _ = LoadLang();
+                _ = LoadLang(filePath);
                 LogWriteLine($"Locale file: {langRelativePath} loaded as {this.LangName} by {this.LangAuthor}", LogType.Scheme, true);
             }
             catch (Exception e)
@@ -29,18 +38,64 @@ namespace Hi3Helper
             }
         }
 
+#if APPLYUPDATE
+        public LangMetadata(Uri fileUri, int index)
+        {
+            this.LangFilePath = fileUri.AbsoluteUri;
+            this.LangIndex = index;
+            this.LangIsLoaded = false;
+
+            try
+            {
+                _ = LoadLang(fileUri);
+                LogWriteLine($"Locale file: {fileUri.AbsoluteUri} loaded as {this.LangName} by {this.LangAuthor}", LogType.Scheme, true);
+            }
+            catch (Exception e)
+            {
+                LogWriteLine($"Failed while parsing locale file: {fileUri.AbsoluteUri}. Ignoring!\r\n{e}", LogType.Warning, true);
+            }
+        }
+#endif
+
         public LocalizationParams LoadLang()
         {
-            using (Stream s = new FileStream(this.LangFilePath, FileMode.Open, FileAccess.Read))
+#if APPLYUPDATE
+            return LoadLang(new Uri(LangFilePath));
+#else
+            using (Stream s = new FileStream(this.LangFilePath!, FileMode.Open, FileAccess.Read))
             {
-                LocalizationParams _langData = (LocalizationParams)JsonSerializer.Deserialize(s, typeof(LocalizationParams), CoreLibraryFieldsJSONContext.Default);
-                this.LangAuthor = _langData.Author;
-                this.LangID = _langData.LanguageID.ToLower();
-                this.LangName = _langData.LanguageName;
-                this.LangIsLoaded = true;
-
-                return _langData;
+                return LoadLang(s);
             }
+#endif
+        }
+
+        public LocalizationParams LoadLang(string langPath)
+        {
+            using (Stream s = new FileStream(langPath!, FileMode.Open, FileAccess.Read))
+            {
+                return LoadLang(s);
+            }
+        }
+
+#if APPLYUPDATE
+        public LocalizationParams LoadLang(Uri langUri)
+        {
+            using (Stream s = AssetLoader.Open(langUri))
+            {
+                return LoadLang(s);
+            }
+        }
+#endif
+
+        public LocalizationParams LoadLang(Stream langStream)
+        {
+            LocalizationParams _langData = (LocalizationParams)JsonSerializer.Deserialize(langStream!, typeof(LocalizationParams), CoreLibraryFieldsJSONContext.Default);
+            this.LangAuthor = _langData!.Author;
+            this.LangID = _langData.LanguageID.ToLower();
+            this.LangName = _langData.LanguageName;
+            this.LangIsLoaded = true;
+
+            return _langData;
         }
 
         public int LangIndex;
@@ -54,43 +109,64 @@ namespace Hi3Helper
     public sealed partial class Locale
     {
         public const string FallbackLangID = "en-us";
+
+#if APPLYUPDATE
+        public static IEnumerable<Uri> GetLocaleUri()
+        {
+            Assembly thisAssembly = Assembly.GetExecutingAssembly();
+            AssetLoader.SetDefaultAssembly(thisAssembly);
+            foreach (Uri asset in AssetLoader
+                .GetAssets(new Uri($"avares://ApplyUpdate-Core/Assets/Locale"), null)
+                .Where(x => x.AbsoluteUri
+                    .EndsWith(".json", StringComparison.InvariantCultureIgnoreCase)))
+                yield return asset;
+        }
+#endif
+
         public static void InitializeLocale()
         {
-            TrySafeRenameOldEnFallback();
-
             int i = 0;
-            foreach (string langPath in Directory.EnumerateFiles(AppLangFolder, "*.json", SearchOption.AllDirectories))
+#if APPLYUPDATE
+            foreach (Uri langPath in GetLocaleUri())
             {
                 LangMetadata Metadata = new LangMetadata(langPath, i);
+#else
+            TrySafeRenameOldEnFallback();
+            foreach (string langPath in Directory.EnumerateFiles(AppLangFolder!, "*.json", SearchOption.AllDirectories))
+            {
+                LangMetadata Metadata = new LangMetadata(langPath, i);
+#endif
                 if (Metadata.LangIsLoaded)
                 {
-                    LanguageNames.Add(Metadata.LangID.ToLower(), Metadata);
-                    LanguageIDIndex.Add(Metadata.LangID);
+                    LanguageNames!.Add(Metadata.LangID.ToLower(), Metadata);
+                    LanguageIDIndex!.Add(Metadata.LangID);
                     i++;
                 }
             }
 
-            if (!LanguageNames.ContainsKey(FallbackLangID))
+            if (!LanguageNames!.ContainsKey(FallbackLangID))
             {
                 throw new LocalizationNotFoundException($"Fallback locale file with ID: \"{FallbackLangID}\" doesn't exist!");
             }
         }
 
+#if !APPLYUPDATE
         private static void TrySafeRenameOldEnFallback()
         {
-            string possibleOldPath = Path.Combine(AppLangFolder, "en.json");
-            string possibleNewPath = Path.Combine(AppLangFolder, "en-us.json");
+            string possibleOldPath = Path.Combine(AppLangFolder!, "en.json");
+            string possibleNewPath = Path.Combine(AppLangFolder!, "en-us.json");
 
             if (File.Exists(possibleOldPath) && File.Exists(possibleNewPath)) File.Delete(possibleOldPath);
             if (File.Exists(possibleOldPath) && !File.Exists(possibleNewPath)) File.Move(possibleOldPath, possibleNewPath);
         }
+#endif
 
         public static void LoadLocale(string langID)
         {
             try
             {
-                LangFallback = LanguageNames[FallbackLangID].LoadLang();
-                langID = langID.ToLower();
+                LangFallback = LanguageNames![FallbackLangID].LoadLang();
+                langID = langID!.ToLower();
                 if (!LanguageNames.ContainsKey(langID))
                 {
                     Lang = LanguageNames[FallbackLangID].LoadLang();
@@ -99,6 +175,7 @@ namespace Hi3Helper
                 }
 
                 Lang = LanguageNames[langID].LoadLang();
+                TryLoadSizePrefix(Lang);
             }
             catch (Exception e)
             {
@@ -108,6 +185,40 @@ namespace Hi3Helper
             {
                 LangFallback = null;
             }
+        }
+
+        private static void TryLoadSizePrefix(LocalizationParams langData)
+        {
+            if (string.IsNullOrEmpty(langData._Misc.SizePrefixes1000U))
+            {
+                LogWriteLine($"Locale file with ID: {langData.LanguageID} doesn't have size prefix value! The size prefix will not be changed!.", LogType.Warning, true);
+                return;
+            }
+
+            ReadOnlySpan<char> speedPrefixSpan = langData._Misc.SizePrefixes1000U.AsSpan();
+            Span<Range> spanRange = stackalloc Range[32];
+            int rangesCount = speedPrefixSpan.Split(spanRange, '|', StringSplitOptions.RemoveEmptyEntries);
+
+            if (rangesCount != 9)
+            {
+                LogWriteLine($"Locale file with ID: {langData.LanguageID} doesn't have a correct size prefix values! Make sure that the prefix value consists 9 values with '|' as its delimiter!", LogType.Warning, true);
+                return;
+            }
+
+            string[] sizeSurfixes = new string[rangesCount];
+
+            try
+            {
+                for (int i = 0; i < rangesCount; i++)
+                    sizeSurfixes[i] = speedPrefixSpan[spanRange[i]].ToString();
+            }
+            catch (Exception ex)
+            {
+                LogWriteLine($"An error has occurred while parsing size prefix value for locale file with ID: {langData.LanguageID}!\r\n{ex}", LogType.Warning, true);
+                return;
+            }
+
+            ConverterTool.SizeSuffixes = sizeSurfixes;
         }
 
         public static Dictionary<string, LangMetadata> LanguageNames = new Dictionary<string, LangMetadata>();

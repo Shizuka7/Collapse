@@ -1,77 +1,61 @@
-using Microsoft.UI;
-using Microsoft.UI.Input;
+using CollapseLauncher.Helper;
+using CollapseLauncher.Helper.Animation;
+using CollapseLauncher.Helper.Image;
+using CollapseLauncher.Helper.Loading;
+using CollapseLauncher.Pages;
+using CollapseLauncher.Pages.OOBE;
+using Hi3Helper;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using Windows.Foundation;
-using Windows.Graphics;
-using static CollapseLauncher.FileDialogCOM.FileDialogNative;
+using Windows.UI;
 using static CollapseLauncher.InnerLauncherConfig;
 using static Hi3Helper.InvokeProp;
 using static Hi3Helper.Logger;
 using static Hi3Helper.Shared.Region.LauncherConfig;
-using SizeN = System.Drawing.Size;
 
 namespace CollapseLauncher
 {
     public sealed partial class MainWindow : Window
     {
-        public MainWindow()
-        {
-            try
-            {
-                m_window = this;
-            }
-            catch (Exception ex)
-            {
-                LogWriteLine($"FATAL CRASH!!!\r\n{ex}", Hi3Helper.LogType.Error, true);
-                Console.ReadLine();
-            }
-        }
+        public MainWindow() { }
 
         public void InitializeWindowProperties(bool startOOBE = false)
         {
             try
             {
                 InitializeWindowSettings();
-                if (m_appWindow.TitleBar.ExtendsContentIntoTitleBar) m_appWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+                LoadingMessageHelper.Initialize();
 
-                if (IsFirstInstall || startOOBE == true)
+                if (WindowUtility.CurrentWindowTitlebarExtendContent) WindowUtility.CurrentWindowTitlebarHeightOption = TitleBarHeightOption.Tall;
+
+                if (IsFirstInstall || startOOBE)
                 {
-                    ExtendsContentIntoTitleBar = false;
-                    SetWindowSize(m_windowHandle, WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Width, WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Height);
-                    SetLegacyTitleBarColor();
-                    m_presenter.IsResizable = false;
-                    m_presenter.IsMaximizable = false;
-                    rootFrame.Navigate(typeof(StartupLanguageSelect), null, new DrillInNavigationTransitionInfo());
+                    WindowUtility.CurrentWindowTitlebarExtendContent = true;
+                    WindowUtility.SetWindowSize(WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Width, WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Height);
+                    WindowUtility.ApplyWindowTitlebarLegacyColor();
+                    WindowUtility.CurrentWindowIsResizable = false;
+                    WindowUtility.CurrentWindowIsMaximizable = false;
+                    rootFrame.Navigate(typeof(OOBEStartUpMenu), null, new DrillInNavigationTransitionInfo());
                 }
                 else
                     StartMainPage();
+
+                TitleBarFrameGrid.EnableImplicitAnimation(true);
+                LoadingStatusUIContainer.EnableImplicitAnimation(true);
             }
             catch (Exception ex)
             {
-                LogWriteLine($"Failure while initializing window properties!!!\r\n{ex}", Hi3Helper.LogType.Error, true);
+                LogWriteLine($"Failure while initializing window properties!!!\r\n{ex}", LogType.Error, true);
                 Console.ReadLine();
             }
         }
 
-        public void StartSetupPage()
-        {
-            SetWindowSize(m_windowHandle, WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Width, WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Height);
-            rootFrame.Navigate(typeof(Pages.StartupPage), null, new DrillInNavigationTransitionInfo());
-        }
-
         public void StartMainPage()
         {
-            SetWindowSize(m_windowHandle, WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Width, WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Height);
+            WindowUtility.SetWindowSize(WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Width, WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Height);
             rootFrame.Navigate(typeof(MainPage), null, new DrillInNavigationTransitionInfo());
-            // rootFrame.Navigate(typeof(Prototype.MainPageNew), null, new DrillInNavigationTransitionInfo());
         }
 
         private void InitializeAppWindowAndIntPtr()
@@ -79,12 +63,9 @@ namespace CollapseLauncher
             this.InitializeComponent();
             this.Activate();
             this.Closed += (_, _) => { App.IsAppKilled = true; };
-            RunSetDragAreaQueue();
-            // Initialize Window Handlers
-            m_windowHandle = GetActiveWindow();
-            m_windowID = Win32Interop.GetWindowIdFromWindow(m_windowHandle);
-            m_appWindow = AppWindow.GetFromWindowId(m_windowID);
-            m_presenter = m_appWindow.Presenter as OverlappedPresenter;
+
+            // Initialize Window Handlers and register to Window Utility
+            WindowUtility.RegisterWindow(this);
 
             string title = $"Collapse";
             if (IsPreview)
@@ -92,28 +73,17 @@ namespace CollapseLauncher
 #if DEBUG
             title += " [Debug]";
 #endif
-            m_appWindow.Title = title;
+            var instanceCount = MainEntryPoint.InstanceCount;
+            if (instanceCount > 1)
+                title += $" - #{instanceCount}";
 
-            DisplayArea displayArea = DisplayArea.GetFromWindowId(m_windowID, DisplayAreaFallback.Primary);
-
-            // Get Monitor DPI
-            IntPtr hMonitor = Win32Interop.GetMonitorFromDisplayId(displayArea.DisplayId);
-            if (GetDpiForMonitor(hMonitor, Monitor_DPI_Type.MDT_Default, out uint dpiX, out uint _) != 0)
-            {
-                throw new Exception("Could not get DPI for monitor.");
-            }
-
-            m_appDPIScale = (uint)(((long)dpiX * 100 + (96 >> 1)) / 96) / 100.0;
-
-            InitHandlerPointer(m_windowHandle);
+            WindowUtility.CurrentWindowTitle = title;
         }
 
         private void LoadWindowIcon()
         {
-            string path = Path.Combine(AppFolder, "icon.ico");
-            if (!File.Exists(path)) return;
-            m_appWindow.SetIcon(path);
-            m_appWindow.TitleBar.IconShowOptions = IconShowOptions.HideIconAndSystemMenu;
+            WindowUtility.SetWindowTitlebarIcon(AppIconLarge, AppIconSmall);
+            WindowUtility.CurrentWindowTitlebarIconShowOption = IconShowOptions.HideIconAndSystemMenu;
         }
 
         public void InitializeWindowSettings()
@@ -121,150 +91,68 @@ namespace CollapseLauncher
             InitializeAppWindowAndIntPtr();
             LoadWindowIcon();
 
-            SetWindowSize(m_windowHandle, WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Width, WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Height);
+            WindowUtility.SetWindowSize(WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Width, WindowSize.WindowSize.CurrentWindowSize.WindowBounds.Height);
 
             // Check to see if customization is supported.
             m_windowSupportCustomTitle = AppWindowTitleBar.IsCustomizationSupported();
 
             if (m_windowSupportCustomTitle)
             {
-                SetInitialDragArea();
-                m_appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
-                m_appWindow.TitleBar.IconShowOptions = IconShowOptions.HideIconAndSystemMenu;
+                WindowUtility.SetWindowTitlebarDefaultDragArea();
+                WindowUtility.CurrentWindowTitlebarExtendContent = true;
+                WindowUtility.CurrentWindowTitlebarIconShowOption = IconShowOptions.HideIconAndSystemMenu;
 
-                m_presenter.IsResizable = false;
-                m_presenter.IsMaximizable = false;
+                WindowUtility.CurrentWindowIsResizable = false;
+                WindowUtility.CurrentWindowIsMaximizable = false;
 
-                m_appWindow.TitleBar.ButtonBackgroundColor = new Windows.UI.Color { A = 0, B = 0, G = 0, R = 0 };
-                m_appWindow.TitleBar.ButtonInactiveBackgroundColor = new Windows.UI.Color { A = 0, B = 0, G = 0, R = 0 };
+                WindowUtility.CurrentAppWindow.TitleBar.ButtonBackgroundColor = new Color { A = 0, B = 0, G = 0, R = 0 };
+                WindowUtility.CurrentAppWindow.TitleBar.ButtonInactiveBackgroundColor = new Color { A = 0, B = 0, G = 0, R = 0 };
 
                 // Hide system menu
-                var controlsHwnd = FindWindowEx(m_windowHandle, 0, "ReunionWindowingCaptionControls", "ReunionCaptionControlsWindow");
+                var controlsHwnd = FindWindowEx(WindowUtility.CurrentWindowPtr, 0, "ReunionWindowingCaptionControls", "ReunionCaptionControlsWindow");
                 if (controlsHwnd != IntPtr.Zero)
                 {
                     DestroyWindow(controlsHwnd);
                 }
-
-                // Fix mouse event
-                var incps = InputNonClientPointerSource.GetForWindowId(m_windowID);
-                incps.SetRegionRects(NonClientRegionKind.Close, null);
-                incps.SetRegionRects(NonClientRegionKind.Minimize, null);
-                EnableNonClientArea();
             }
             else
             {
                 // Shouldn't happen
                 // https://learn.microsoft.com/en-us/windows/apps/develop/title-bar#colors
 
-                m_presenter.IsResizable = false;
-                m_presenter.IsMaximizable = false;
-                ExtendsContentIntoTitleBar = false;
-                AppTitleBar.Visibility = Visibility.Collapsed;
+                if (WindowUtility.CurrentOverlappedPresenter != null && WindowUtility.CurrentWindow != null)
+                {
+                    WindowUtility.CurrentOverlappedPresenter.IsResizable = false;
+                    WindowUtility.CurrentOverlappedPresenter.IsMaximizable = false;
+                    WindowUtility.CurrentWindowTitlebarExtendContent = false;
+                    AppTitleBar.Visibility = Visibility.Collapsed;
+                }
             }
 
             MainFrameChangerInvoker.WindowFrameEvent += MainFrameChangerInvoker_WindowFrameEvent;
             LauncherUpdateInvoker.UpdateEvent += LauncherUpdateInvoker_UpdateEvent;
 
-            // Install WndProc hook
-            const int GWLP_WNDPROC = -4;
-            m_newWndProcDelegate = (WndProcDelegate)WndProc;
-            IntPtr pWndProc = Marshal.GetFunctionPointerForDelegate(m_newWndProcDelegate);
-            m_oldWndProc = SetWindowLongPtr(m_windowHandle, GWLP_WNDPROC, pWndProc);
+            m_consoleCtrlHandler += ConsoleCtrlHandler;
+            SetConsoleCtrlHandler(m_consoleCtrlHandler, true);
         }
 
-        public void EnableNonClientArea()
+        private bool ConsoleCtrlHandler(uint dwCtrlType)
         {
-            var incps = InputNonClientPointerSource.GetForWindowId(m_windowID);
-            var safeArea = new RectInt32[] { new(m_appWindow.Size.Width - (int)((144 + 12) * m_appDPIScale), 0, (int)((144 + 12) * m_appDPIScale), (int)(48 * m_appDPIScale)) };
-            incps.SetRegionRects(NonClientRegionKind.Passthrough, safeArea);
-        }
-
-        public void DisableNonClientArea()
-        {
-            var incps = InputNonClientPointerSource.GetForWindowId(m_windowID);
-            var safeArea = new RectInt32[] { new(0, 0, m_appWindow.Size.Width, (int)(48 * m_appDPIScale)) };
-            incps.SetRegionRects(NonClientRegionKind.Passthrough, safeArea);
-        }
-
-        private delegate IntPtr WndProcDelegate(IntPtr hwnd, uint msg, UIntPtr wParam, IntPtr lParam);
-
-        private IntPtr WndProc(IntPtr hwnd, uint msg, UIntPtr wParam, IntPtr lParam)
-        {
-            const uint WM_SYSCOMMAND = 0x0112;
-            const uint WM_SHOWWINDOW = 0x0018;
-            switch (msg)
-            {
-                case WM_SYSCOMMAND:
-                {
-                    const uint SC_MAXIMIZE = 0xF030;
-                    const uint SC_MINIMIZE = 0xF020;
-                    const uint SC_RESTORE = 0xF120;
-                    switch (wParam)
-                    {
-                        case SC_MAXIMIZE:
-                        {
-                            // TODO: Apply to force disable the "double-click to maximize" feature.
-                            //       The feature should expected to be disabled while m_presenter.IsResizable and IsMaximizable
-                            //       set to false. But the feature is still not respecting the changes in WindowsAppSDK 1.4.
-                            //
-                            //       Issues have been described here:
-                            //       https://github.com/microsoft/microsoft-ui-xaml/issues/8666
-                            //       https://github.com/microsoft/microsoft-ui-xaml/issues/8783
-
-                            // Ignore WM_SYSCOMMAND SC_MAXIMIZE message
-                            // Thank you Microsoft :)
-                            return 0;
-                        }
-                        case SC_MINIMIZE:
-                        {
-                            if (GetAppConfigValue("MinimizeToTray").ToBool())
-                            {
-                                // Carousel is handled inside WM_SHOWWINDOW message for minimize to tray
-                                TrayIcon.ToggleAllVisibility();
-                                return 0;
-                            }
-
-                            m_homePage?.CarouselStopScroll();
-                            break;
-                        }
-                        case SC_RESTORE:
-                        {
-                            m_homePage?.CarouselRestartScroll();
-                            break;
-                        }
-                    }
-                    break;
-                }
-                case WM_SHOWWINDOW:
-                {
-                    if (wParam == 0)
-                        m_homePage?.CarouselStopScroll();
-                    else
-                        m_homePage?.CarouselRestartScroll();
-                    break;
-                }
-            }
-            return CallWindowProc(m_oldWndProc, hwnd, msg, wParam, lParam);
-        }
-
-        private void SetLegacyTitleBarColor()
-        {
-            Application.Current.Resources["WindowCaptionForeground"] = IsAppThemeLight ? new Windows.UI.Color { A = 255, B = 0, G = 0, R = 0 } : new Windows.UI.Color { A = 255, B = 255, G = 255, R = 255 };
-            Application.Current.Resources["WindowCaptionBackground"] = new SolidColorBrush(new Windows.UI.Color { A = 0, B = 0, G = 0, R = 0 });
-            Application.Current.Resources["WindowCaptionBackgroundDisabled"] = new SolidColorBrush(new Windows.UI.Color { A = 0, B = 0, G = 0, R = 0 });
+            ImageLoaderHelper.DestroyWaifu2X();
+            return true;
         }
 
         private void LauncherUpdateInvoker_UpdateEvent(object sender, LauncherUpdateProperty e)
         {
             if (e.QuitFromUpdateMenu)
             {
-                overlayFrame.Navigate(typeof(Pages.NullPage), null, new EntranceNavigationTransitionInfo());
+                overlayFrame.Navigate(typeof(NullPage), null, new EntranceNavigationTransitionInfo());
                 return;
             }
 
             if (e.IsUpdateAvailable)
             {
-                overlayFrame.Navigate(typeof(Pages.UpdatePage));
+                overlayFrame.Navigate(typeof(UpdatePage));
             }
         }
 
@@ -273,104 +161,26 @@ namespace CollapseLauncher
             rootFrame.Navigate(e.FrameTo, null, e.Transition);
         }
 
-        private int _lastWindowWidth;
-        private int _lastWindowHeight;
-        private WindowRect _windowPosAndSize = new WindowRect();
-
-        public void SetWindowSize(IntPtr hwnd, int width = 1028, int height = 634)
-        {
-            if (hwnd == IntPtr.Zero) hwnd = m_windowHandle;
-
-            var dpi = GetDpiForWindow(hwnd);
-            float scalingFactor = (float)dpi / 96;
-            _lastWindowWidth = (int)(width * scalingFactor);
-            _lastWindowHeight = (int)(height * scalingFactor);
-
-            SizeN desktopSize = Hi3Helper.Screen.ScreenProp.GetScreenSize();
-            int xOff = (desktopSize.Width - _lastWindowWidth) / 2;
-            int yOff = (desktopSize.Height - _lastWindowHeight) / 2;
-
-            // Old Interop ver. Call
-            // SetWindowPos(hwnd, (IntPtr)SpecialWindowHandles.HWND_TOP,
-            //                             xOff, yOff, width, height,
-            //                             SetWindowPosFlags.SWP_SHOWWINDOW);
-
-            // New m_appWindow built-in Move and Resize
-            m_appWindow.MoveAndResize(new RectInt32
-            {
-                Width = _lastWindowWidth,
-                Height = _lastWindowHeight,
-                X = xOff,
-                Y = yOff
-            });
-            AssignCurrentWindowPosition(hwnd);
-        }
-
-        private void AssignCurrentWindowPosition(IntPtr hwnd)
-        {
-            GetWindowRect(hwnd, ref _windowPosAndSize);
-            Rect lastRect = this.Bounds;
-
-            lastRect.X = _windowPosAndSize.Left;
-            lastRect.Y = _windowPosAndSize.Top;
-
-            m_windowPosSize = lastRect;
-        }
-
-        public static void SetInitialDragArea()
-        {
-            double scaleAdjustment = m_appDPIScale;
-            RectInt32[] dragRects = new RectInt32[] { new RectInt32(0, 0, (int)(m_window.Bounds.Width * scaleAdjustment), (int)(48 * scaleAdjustment)) };
-
-            SetDragArea(dragRects);
-        }
-
-        public static void SetDragArea(RectInt32[] area)
-        {
-            if (m_appWindow.TitleBar != null && m_windowSupportCustomTitle && m_appWindow.TitleBar.ExtendsContentIntoTitleBar)
-            {
-                titleBarDragQueue.Add(area);
-            }
-        }
-
-        private static List<RectInt32[]> titleBarDragQueue = new List<RectInt32[]>();
-
-        private static async void RunSetDragAreaQueue()
-        {
-            while (!App.IsAppKilled)
-            {
-                while (titleBarDragQueue.Count > 0)
-                {
-                    m_appWindow.TitleBar.SetDragRectangles(titleBarDragQueue[0]);
-                    titleBarDragQueue.RemoveAt(0);
-                }
-                titleBarDragQueue.Clear();
-                await Task.Delay(250);
-            }
-        }
-
-        public void Minimize()
-        {
-            const uint WM_SYSCOMMAND = 0x0112;
-            const uint SC_MINIMIZE = 0xF020;
-            SendMessage(m_windowHandle, WM_SYSCOMMAND, SC_MINIMIZE, 0);
-        }
-
-        public void Restore()
-        {
-            const uint WM_SYSCOMMAND = 0x0112;
-            const uint SC_RESTORE = 0xF120;
-            SendMessage(m_windowHandle, WM_SYSCOMMAND, SC_RESTORE, 0);
-        }
-
         private void MinimizeButton_Click(object sender, RoutedEventArgs e)
         {
-            this.Minimize();
+            WindowUtility.WindowMinimize();
         }
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        private void CloseButton_Click(object sender, RoutedEventArgs e) => CloseApp();
+        
+        /// <summary>
+        /// Close app and do necessary events before closing
+        /// </summary>
+        public void CloseApp()
         {
-            this.Close();
+            _TrayIcon?.Dispose();
+            Close();
+        }
+        
+        private void MainWindow_OnSizeChanged(object sender, WindowSizeChangedEventArgs args)
+        {
+            // Recalculate non-client area size
+            WindowUtility.EnableWindowNonClientArea();
         }
     }
 }

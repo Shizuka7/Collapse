@@ -1,10 +1,23 @@
+using CollapseLauncher.CustomControls;
 using CollapseLauncher.Dialogs;
+using CollapseLauncher.DiscordPresence;
+using CollapseLauncher.Extension;
+using CollapseLauncher.Helper;
+using CollapseLauncher.Helper.Animation;
+using CollapseLauncher.Helper.Background;
+using CollapseLauncher.Helper.Image;
+using CollapseLauncher.Helper.Metadata;
+using CollapseLauncher.Helper.Update;
+using CollapseLauncher.Interfaces;
 using CollapseLauncher.Pages;
 using CollapseLauncher.Statics;
+using CommunityToolkit.WinUI;
+using CommunityToolkit.WinUI.Animations;
 using Hi3Helper;
-using Hi3Helper.Http;
-using Hi3Helper.Preset;
 using Hi3Helper.Shared.ClassStruct;
+using InnoSetupHelper;
+using Microsoft.UI;
+using Microsoft.UI.Input;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -13,6 +26,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -25,13 +39,12 @@ using Windows.Graphics;
 using Windows.System;
 using static CollapseLauncher.Dialogs.KeyboardShortcuts;
 using static CollapseLauncher.InnerLauncherConfig;
-using static CollapseLauncher.RegionResourceListHelper;
 using static CollapseLauncher.Statics.GamePropertyVault;
 using static Hi3Helper.Data.ConverterTool;
 using static Hi3Helper.Locale;
 using static Hi3Helper.Logger;
-using static Hi3Helper.Preset.ConfigV2Store;
 using static Hi3Helper.Shared.Region.LauncherConfig;
+using UIElementExtensions = CollapseLauncher.Extension.UIElementExtensions;
 
 namespace CollapseLauncher
 {
@@ -40,17 +53,22 @@ namespace CollapseLauncher
     public partial class MainPage : Page
     {
         #region Properties
-        bool         IsLoadNotifComplete;
         private bool LockRegionChangeBtn;
-        private bool IsLoadFrameCompleted = true;
+        private bool DisableInstantRegionChange;
         private bool IsTitleIconForceShow;
         private bool IsNotificationPanelShow;
-        private bool IsKbShortcutCannotChange = true;
-        private int  CurrentGameCategory      = -1;
-        private int  CurrentGameRegion        = -1;
+        private bool IsLoadNotifComplete;
+        private bool IsLoadFrameCompleted = true;
+        private bool IsFirstStartup       = true;
+        private int  CurrentGameCategory  = -1;
+        private int  CurrentGameRegion    = -1;
 
-        public static bool         IsChangeDragArea        = true;
-        public static List<string> PreviousTagString       = new List<string>();
+        internal static List<string> PreviousTagString       = new();
+
+#nullable enable
+        internal static BackgroundMediaUtility? CurrentBackgroundHandler = null;
+        private         BackgroundMediaUtility? LocalBackgroundHandler = null;
+#nullable restore
         #endregion
 
         #region Main Routine
@@ -58,15 +76,16 @@ namespace CollapseLauncher
         {
             try
             {
-                LogWriteLine($"Welcome to Collapse Launcher v{AppCurrentVersion.VersionString} - {MainEntryPoint.GetVersionString()}", LogType.Default, false);
+                LogWriteLine($"Welcome to Collapse Launcher v{LauncherUpdateHelper.LauncherCurrentVersionString} - {MainEntryPoint.GetVersionString()}", LogType.Default, false);
                 LogWriteLine($"Application Data Location:\r\n\t{AppDataFolder}", LogType.Default);
                 InitializeComponent();
                 m_mainPage                             =  this;
-                LoadingPopupPill.Translation           += Shadow32;
-                LoadingCancelBtn.Translation           += Shadow16;
                 ToggleNotificationPanelBtn.Translation += Shadow16;
                 WebView2Frame.Navigate(typeof(BlankPage));
                 Loaded += StartRoutine;
+
+                // Enable implicit animation on certain elements
+                AnimationHelper.EnableImplicitAnimation(true, null, GridBG_RegionGrid, GridBG_NotifBtn, NotificationPanelClearAllGrid);
             }
             catch (Exception ex)
             {
@@ -77,44 +96,52 @@ namespace CollapseLauncher
 
         private void Page_Unloaded(object sender, RoutedEventArgs e)
         {
-            if (IsChangeDragArea)
-            {
-                UnsubscribeEvents();
-                MainWindow.SetDragArea(DragAreaMode_Full);
-            }
+            UnsubscribeEvents();
+#if !DISABLEDISCORD
+            AppDiscordPresence.Dispose();
+#endif
+            ImageLoaderHelper.DestroyWaifu2X();
+            LocalBackgroundHandler?.Dispose();
         }
 
         private async void StartRoutine(object sender, RoutedEventArgs e)
         {
             try
             {
-                ChangeRegionConfirmBtn.Visibility = !IsShowRegionChangeWarning ? Visibility.Collapsed : Visibility.Visible;
-                ChangeRegionConfirmBtnNoWarning.Visibility = !IsShowRegionChangeWarning ? Visibility.Visible : Visibility.Collapsed;
-
+                if (!IsShowRegionChangeWarning && IsInstantRegionChange)
+                {
+                    ChangeGameBtnGrid.Visibility = Visibility.Collapsed;
+                    ChangeGameBtnGridShadow.Visibility = Visibility.Collapsed;
+                    ChangeRegionConfirmBtn.Visibility = Visibility.Collapsed;
+                    ChangeRegionConfirmBtnNoWarning.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    ChangeRegionConfirmBtn.Visibility = !IsShowRegionChangeWarning ? Visibility.Collapsed : Visibility.Visible;
+                    ChangeRegionConfirmBtnNoWarning.Visibility = !IsShowRegionChangeWarning ? Visibility.Visible : Visibility.Collapsed;
+                }
+                
                 if (!await CheckForAdminAccess(this))
                 {
-                    Application.Current.Exit();
+                    if (WindowUtility.CurrentWindow is MainWindow mainWindow)
+                        mainWindow?.CloseApp();
                     return;
                 }
-                #if !DEBUG
-                LauncherUpdateWatcher.StartCheckUpdate(false);
-                #else 
-                LogWriteLine("Running debug build, stopping update checks!", LogType.Error, false);
-                #endif
 
                 LoadGamePreset();
                 SetThemeParameters();
 
-                VersionNumberIndicator.Text = AppCurrentVersion.VersionString;
+                VersionNumberIndicator.Text = LauncherUpdateHelper.LauncherCurrentVersionString;
                 #if DEBUG
                 VersionNumberIndicator.Text += "d";
                 #endif
                 if (IsPreview) VersionNumberIndicator.Text += "-PRE";
 
-                m_actualMainFrameSize = new Size((m_window as MainWindow).Bounds.Width, (m_window as MainWindow).Bounds.Height);
+                if (WindowUtility.CurrentWindow is MainWindow)
+                    m_actualMainFrameSize = new Size((float)WindowUtility.CurrentWindow.Bounds.Width, (float)WindowUtility.CurrentWindow.Bounds.Height);
 
                 SubscribeEvents();
-                SetDefaultDragAreaAsync();
+                ChangeTitleDragArea.Change(DragAreaTemplate.Default);
 
                 await InitializeStartup();
             }
@@ -129,47 +156,44 @@ namespace CollapseLauncher
         {
             RunBackgroundCheck();
 
+            // Initialize the background image utility
+            CurrentBackgroundHandler = await BackgroundMediaUtility.CreateInstanceAsync(this, BackgroundAcrylicMask, BackgroundOverlayTitleBar, BackgroundNewBackGrid, BackgroundNewMediaPlayerGrid);
+            LocalBackgroundHandler = CurrentBackgroundHandler;
+
             // Load community tools properties
             PageStatics._CommunityToolsProperty = CommunityToolsProperty.LoadCommunityTools();
 
-            Type Page;
+            Type Page = typeof(HomePage);
 
-            if (!IsConfigV2StampExist() || !IsConfigV2ContentExist())
-            {
-                LogWriteLine($"Loading config metadata for the first time...", LogType.Default, true);
-                HideLoadingPopup(false, Lang._MainPage.RegionLoadingAPITitle1, Lang._MainPage.RegionLoadingAPITitle2);
-                await DownloadConfigV2Files(true, true);
-            }
+            bool isCacheUpdaterMode = m_appMode == AppMode.Hi3CacheUpdater;
+            await LauncherMetadataHelper.Initialize(isCacheUpdaterMode);
 
-            if (m_appMode == AppMode.Hi3CacheUpdater)
-            {
-                LoadConfigV2CacheOnly();
-                Page = typeof(CachesPage);
+            if (!isCacheUpdaterMode) SetActivatedRegion();
 
-                // Set background opacity to 0
-                BackgroundFront.Opacity = 0;
-            }
-            else
-            {
-                LoadConfigV2();
-                Page = typeof(HomePage);
-            }
+#if !DISABLEDISCORD
+            bool isInitialStart = GetAppConfigValue("EnableDiscordRPC").ToBool();
+            AppDiscordPresence = new DiscordPresenceManager(isInitialStart);
+            AppDiscordPresence.SetActivity(ActivityType.Idle);
+#endif
 
             // Lock ChangeBtn for first start
             LockRegionChangeBtn = true;
 
-            PresetConfigV2 Preset = LoadSavedGameSelection();
+            (PresetConfig presetConfig, string gameName, string gameRegion) = await LoadSavedGameSelection();
+            if (m_appMode == AppMode.Hi3CacheUpdater)
+                Page = (m_appMode == AppMode.Hi3CacheUpdater && presetConfig.GameType == GameNameType.Honkai) ? typeof(CachesPage) : typeof(NotInstalledPage);
 
             InitKeyboardShortcuts();
-            HideLoadingPopup(false, Lang._MainPage.RegionLoadingTitle, Preset.ZoneFullname);
-            if (await LoadRegionFromCurrentConfigV2(Preset))
+
+            InvokeLoadingRegionPopup(true, Lang._MainPage.RegionLoadingTitle, RegionToChangeName);
+            if (await LoadRegionFromCurrentConfigV2(presetConfig, gameName, gameRegion))
             {
                 MainFrameChanger.ChangeMainFrame(Page);
-                HideLoadingPopup(true, Lang._MainPage.RegionLoadingTitle, Preset.ZoneFullname);
             }
 
             // Unlock ChangeBtn for first start
             LockRegionChangeBtn = false;
+            InvokeLoadingRegionPopup(false);
         }
         #endregion
 
@@ -179,6 +203,24 @@ namespace CollapseLauncher
             NavigationViewControl.MenuItems.Clear();
             Bindings.Update();
             UpdateLayout();
+
+            // Find the last selected category/title and region
+            string lastName = LauncherMetadataHelper.CurrentMetadataConfigGameName;
+            string lastRegion = LauncherMetadataHelper.CurrentMetadataConfigGameRegion;
+
+            #nullable enable
+            List<string>? gameNameCollection = LauncherMetadataHelper.GetGameNameCollection()!;
+            List<string>? gameRegionCollection = LauncherMetadataHelper.GetGameRegionCollection(lastName!)!;
+
+            int indexOfName = gameNameCollection.IndexOf(lastName!);
+            int indexOfRegion = gameRegionCollection.IndexOf(lastRegion!);
+            #nullable restore
+                
+            // Rebuild Game Titles and Regions ComboBox items
+            ComboBoxGameCategory.ItemsSource = BuildGameTitleListUI();
+            ComboBoxGameCategory.SelectedIndex = indexOfName;
+            ComboBoxGameRegion.SelectedIndex = indexOfRegion;
+
             InitializeNavigationItems(false);
             ChangeTitleDragArea.Change(DragAreaTemplate.Default);
         }
@@ -186,7 +228,7 @@ namespace CollapseLauncher
         private void ShowLoadingPageInvoker_PageEvent(object sender, ShowLoadingPageProperty e)
         {
             BackgroundImgChanger.ToggleBackground(e.Hide);
-            HideLoadingPopup(e.Hide, e.Title, e.Subtitle);
+            InvokeLoadingRegionPopup(!e.Hide, e.Title, e.Subtitle);
         }
 
         private void SpawnWebView2Invoker_SpawnEvent(object sender, SpawnWebView2Property e)
@@ -205,8 +247,8 @@ namespace CollapseLauncher
             if (e.Exception.GetType() == typeof(NotImplementedException))
             {
                 PreviousTag = "unavailable";
-                if (!DispatcherQueue.HasThreadAccess)
-                    DispatcherQueue.TryEnqueue(() => MainFrameChanger.ChangeMainFrame(typeof(UnavailablePage)));
+                if (!DispatcherQueue?.HasThreadAccess ?? false)
+                    DispatcherQueue?.TryEnqueue(() => MainFrameChanger.ChangeMainFrame(typeof(UnavailablePage)));
                 else
                     MainFrameChanger.ChangeMainFrame(typeof(UnavailablePage));
 
@@ -231,47 +273,89 @@ namespace CollapseLauncher
         #region Drag Area
         private RectInt32[] DragAreaMode_Normal
         {
-            get => new RectInt32[2]
+            get
             {
-                new RectInt32((int)(TitleBarDrag1.ActualOffset.X * m_appDPIScale),
-                              0,
-                              (int)(TitleBarDrag1.ActualWidth * m_appDPIScale),
-                              (int)(48 * m_appDPIScale)),
-                new RectInt32((int)(TitleBarDrag2.ActualOffset.X * m_appDPIScale),
-                              0,
-                              (int)(TitleBarDrag2.ActualWidth * m_appDPIScale),
-                              (int)(48 * m_appDPIScale))
-            };
+                double scaleFactor = WindowUtility.CurrentWindowMonitorScaleFactor;
+                RectInt32[] rect = new RectInt32[2]
+                {
+
+                    new RectInt32((int)(TitleBarDrag1.ActualOffset.X * scaleFactor),
+                                  0,
+                                  (int)(TitleBarDrag1.ActualWidth * scaleFactor),
+                                  (int)(48 * scaleFactor)),
+                    new RectInt32((int)(TitleBarDrag2.ActualOffset.X * scaleFactor),
+                                  0,
+                                  (int)(TitleBarDrag2.ActualWidth * scaleFactor),
+                                  (int)(48 * scaleFactor))
+                };
+                return rect;
+            }
         }
 
         private RectInt32[] DragAreaMode_Full
         {
-            get => new RectInt32[1]
+            get
             {
-                new RectInt32(0,
-                              0,
-                              (int)((m_windowPosSize.Width - 96) * m_appDPIScale),
-                              (int)(48 * m_appDPIScale))
-            };
+                Rect currentWindowPos = WindowUtility.CurrentWindowPosition;
+                double scaleFactor = WindowUtility.CurrentWindowMonitorScaleFactor;
+
+                RectInt32[] rect = new RectInt32[1]
+                {
+                    new RectInt32(0,
+                                  0,
+                                  (int)((currentWindowPos.Width - 96) * scaleFactor),
+                                  (int)(48 * scaleFactor))
+                };
+                return rect;
+            }
         }
 
-        private async void SetDefaultDragAreaAsync()
+        private RectInt32 GetElementPos(FrameworkElement element)
+        {
+            GeneralTransform transformTransform = element.TransformToVisual(null);
+            Rect bounds = transformTransform.TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
+            double scaleFactor = WindowUtility.CurrentWindowMonitorScaleFactor;
+
+            return new RectInt32(
+                _X: (int)Math.Round(bounds.X * scaleFactor),
+                _Y: (int)Math.Round(bounds.Y * scaleFactor),
+                _Width: (int)Math.Round(bounds.Width * scaleFactor),
+                _Height: (int)Math.Round(bounds.Height * scaleFactor)
+            );
+        }
+
+        private void GridBG_RegionGrid_SizeChanged(object sender, SizeChangedEventArgs e) => ChangeTitleDragArea.Change(DragAreaTemplate.Default);
+
+        private void MainPageGrid_SizeChanged(object sender, SizeChangedEventArgs e) => ChangeTitleDragArea.Change(DragAreaTemplate.Default);
+
+        private async void ChangeTitleDragAreaInvoker_TitleBarEvent(object sender, ChangeTitleDragAreaProperty e)
         {
             await Task.Delay(250);
-            ChangeTitleDragArea.Change(DragAreaTemplate.Default);
-        }
 
-        private void ChangeTitleDragAreaInvoker_TitleBarEvent(object sender, ChangeTitleDragAreaProperty e)
-        {
+            InputNonClientPointerSource nonClientInputSrc = InputNonClientPointerSource.GetForWindowId(WindowUtility.CurrentWindowId.Value);
+            WindowUtility.EnableWindowNonClientArea();
+            WindowUtility.SetWindowTitlebarDragArea(DragAreaMode_Full);
+
             switch (e.Template)
             {
                 case DragAreaTemplate.Full:
-                    MainWindow.SetDragArea(DragAreaMode_Full);
+                    nonClientInputSrc.ClearRegionRects(NonClientRegionKind.Passthrough);
                     break;
                 case DragAreaTemplate.Default:
-                    MainWindow.SetDragArea(DragAreaMode_Normal);
+                    nonClientInputSrc.ClearAllRegionRects();
+                    nonClientInputSrc.SetRegionRects(NonClientRegionKind.Passthrough, new RectInt32[]
+                    {
+                        GetElementPos(GridBG_RegionGrid),
+                        GetElementPos(GridBG_IconGrid),
+                        GetElementPos(GridBG_NotifBtn),
+                        GetElementPos((WindowUtility.CurrentWindow as MainWindow)?.MinimizeButton),
+                        GetElementPos((WindowUtility.CurrentWindow as MainWindow)?.CloseButton)
+                    });
                     break;
             }
+
+            nonClientInputSrc.SetRegionRects(NonClientRegionKind.Close, null);
+            nonClientInputSrc.SetRegionRects(NonClientRegionKind.Minimize, null);
         }
         #endregion
 
@@ -280,7 +364,7 @@ namespace CollapseLauncher
         {
             if (!IsPrincipalHasNoAdministratorAccess()) return true;
 
-            ContentDialog dialog = new ContentDialog
+            ContentDialogCollapse dialog = new ContentDialogCollapse(ContentDialogTheme.Warning)
             {
                 Title = Lang._Dialogs.PrivilegeMustRunTitle,
                 Content = Lang._Dialogs.PrivilegeMustRunSubtitle,
@@ -292,12 +376,12 @@ namespace CollapseLauncher
 
             while (true)
             {
-                switch (await dialog.ShowAsync())
+                switch (await dialog.QueueAndSpawnDialog())
                 {
                     case ContentDialogResult.Primary:
                         try
                         {
-                            Process proc = new Process()
+                            Process proc = new()
                             {
                                 StartInfo = new ProcessStartInfo
                                 {
@@ -327,7 +411,7 @@ namespace CollapseLauncher
             using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
             {
                 WindowsPrincipal principal = new WindowsPrincipal(identity);
-                return principal != null && !principal.IsInRole(WindowsBuiltInRole.Administrator);
+                return !principal.IsInRole(WindowsBuiltInRole.Administrator);
             }
         }
         #endregion
@@ -341,79 +425,73 @@ namespace CollapseLauncher
                 GridBG_RegionGrid.HorizontalAlignment  = HorizontalAlignment.Left;
                 GridBG_RegionInner.HorizontalAlignment = HorizontalAlignment.Left;
             }
-
-            Background.Visibility            = Visibility.Visible;
-            BackgroundAcrylicMask.Visibility = Visibility.Visible;
-        }
-
-        public static void ReloadPageTheme(FrameworkElement page, ElementTheme startTheme)
-        {
-            bool IsComplete = false;
-            while (!IsComplete)
-            {
-                try
-                {
-                    if (page.RequestedTheme == ElementTheme.Dark)
-                        page.RequestedTheme = ElementTheme.Light;
-                    else if (page.RequestedTheme == ElementTheme.Light)
-                        page.RequestedTheme = ElementTheme.Default;
-                    else if (page.RequestedTheme == ElementTheme.Default)
-                        page.RequestedTheme = ElementTheme.Dark;
-
-                    if (page.RequestedTheme != startTheme)
-                        ReloadPageTheme(page, startTheme);
-                    IsComplete = true;
-                }
-                catch (Exception)
-                {
-
-                }
-            }
-        }
-
-        public static ElementTheme ConvertAppThemeToElementTheme(AppThemeMode Theme)
-        {
-            switch (Theme)
-            {
-                default:
-                    return ElementTheme.Default;
-                case AppThemeMode.Dark:
-                    return ElementTheme.Dark;
-                case AppThemeMode.Light:
-                    return ElementTheme.Light;
-            }
         }
         #endregion
 
         #region Background Image
-        private void BackgroundImg_IsImageHideEvent(object sender, bool e) => HideBackgroundImage(e);
+        private void BackgroundImg_IsImageHideEvent(object sender, bool e)
+        {
+            if (IsFirstStartup) return;
 
-        private async void CustomBackgroundChanger_Event(object sender, BackgroundImgProperty e)
+            if (e) CurrentBackgroundHandler?.Dimm();
+            else CurrentBackgroundHandler?.Undimm();
+        }
+
+        private void CustomBackgroundChanger_Event(object sender, BackgroundImgProperty e)
         {
             e.IsImageLoaded                   = false;
-            regionBackgroundProp.imgLocalPath = e.ImgPath;
+            LauncherMetadataHelper.CurrentMetadataConfig.GameLauncherApi.GameBackgroundImgLocal = e.ImgPath;
             IsCustomBG                        = e.IsCustom;
 
             if (e.IsCustom)
-                SetAndSaveConfigValue("CustomBGPath", regionBackgroundProp.imgLocalPath);
+                SetAndSaveConfigValue("CustomBGPath", LauncherMetadataHelper.CurrentMetadataConfig.GameLauncherApi.GameBackgroundImgLocal);
 
-            if (!File.Exists(regionBackgroundProp.imgLocalPath))
+            if (!File.Exists(LauncherMetadataHelper.CurrentMetadataConfig.GameLauncherApi.GameBackgroundImgLocal))
             {
                 LogWriteLine($"Custom background file {e.ImgPath} is missing!", LogType.Warning, true);
-                regionBackgroundProp.imgLocalPath = AppDefaultBG;
+                LauncherMetadataHelper.CurrentMetadataConfig.GameLauncherApi.GameBackgroundImgLocal = AppDefaultBG;
             }
 
-            try
+            CurrentBackgroundHandler?.LoadBackground(LauncherMetadataHelper.CurrentMetadataConfig.GameLauncherApi.GameBackgroundImgLocal, e.IsRequestInit, e.IsForceRecreateCache, (Exception ex) =>
             {
-                await RunApplyBackgroundTask(IsFirstStartup);
-            }
-            catch (Exception ex)
-            {
-                regionBackgroundProp.imgLocalPath = AppDefaultBG;
+                LauncherMetadataHelper.CurrentMetadataConfig.GameLauncherApi.GameBackgroundImgLocal = AppDefaultBG;
                 LogWriteLine($"An error occured while loading background {e.ImgPath}\r\n{ex}", LogType.Error, true);
+                ErrorSender.SendException(ex);
+            });
+            
+            e.IsImageLoaded                   = true;
+        }
+
+        internal async void ChangeBackgroundImageAsRegionAsync(bool ShowLoadingMsg = false)
+        {
+            IsCustomBG = GetAppConfigValue("UseCustomBG").ToBool();
+            if (IsCustomBG)
+            {
+                string BGPath = GetAppConfigValue("CustomBGPath").ToString();
+                LauncherMetadataHelper.CurrentMetadataConfig.GameLauncherApi.GameBackgroundImgLocal = string.IsNullOrEmpty(BGPath) ? AppDefaultBG : BGPath;
+            }
+            else
+            {
+                try
+                {
+                    await DownloadBackgroundImage(default);
+                }
+                catch (Exception ex)
+                {
+                    ErrorSender.SendException(ex);
+                    LogWriteLine($"Failed while downloading default background image!\r\n{ex}", LogType.Error, true);
+                    LauncherMetadataHelper.CurrentMetadataConfig.GameLauncherApi.GameBackgroundImgLocal = AppDefaultBG;
+                }
             }
 
-            e.IsImageLoaded = true;
+            if (!IsCustomBG || IsFirstStartup)
+            {
+                BackgroundImgChanger.ChangeBackground(LauncherMetadataHelper.CurrentMetadataConfig.GameLauncherApi.GameBackgroundImgLocal, IsCustomBG);
+                await BackgroundImgChanger.WaitForBackgroundToLoad();
+            }
+
+            IsFirstStartup = false;
+            ColorPaletteUtility.ReloadPageTheme(this, CurrentAppTheme);
         }
         #endregion
 
@@ -429,8 +507,10 @@ namespace CollapseLauncher
             ShowLoadingPageInvoker.PageEvent += ShowLoadingPageInvoker_PageEvent;
             ChangeTitleDragAreaInvoker.TitleBarEvent += ChangeTitleDragAreaInvoker_TitleBarEvent;
             SettingsPage.KeyboardShortcutsEvent += SettingsPage_KeyboardShortcutsEvent;
-            Dialogs.KeyboardShortcuts.KeyboardShortcutsEvent += SettingsPage_KeyboardShortcutsEvent;
+            KeyboardShortcutsEvent += SettingsPage_KeyboardShortcutsEvent;
             UpdateBindingsInvoker.UpdateEvents += UpdateBindingsEvent;
+            GridBG_RegionGrid.SizeChanged += GridBG_RegionGrid_SizeChanged;
+            MainPageGrid.SizeChanged += MainPageGrid_SizeChanged;
         }
 
         private void UnsubscribeEvents()
@@ -444,14 +524,14 @@ namespace CollapseLauncher
             ShowLoadingPageInvoker.PageEvent -= ShowLoadingPageInvoker_PageEvent;
             ChangeTitleDragAreaInvoker.TitleBarEvent -= ChangeTitleDragAreaInvoker_TitleBarEvent;
             SettingsPage.KeyboardShortcutsEvent -= SettingsPage_KeyboardShortcutsEvent;
-            Dialogs.KeyboardShortcuts.KeyboardShortcutsEvent -= SettingsPage_KeyboardShortcutsEvent;
+            KeyboardShortcutsEvent -= SettingsPage_KeyboardShortcutsEvent;
             UpdateBindingsInvoker.UpdateEvents -= UpdateBindingsEvent;
+            GridBG_RegionGrid.SizeChanged -= GridBG_RegionGrid_SizeChanged;
+            MainPageGrid.SizeChanged -= MainPageGrid_SizeChanged;
         }
         #endregion
 
         #region Background Tasks
-        private async Task RunApplyBackgroundTask(bool IsFirstStartup) => await ApplyBackground(IsFirstStartup);
-
         private async void RunBackgroundCheck()
         {
             try
@@ -475,6 +555,13 @@ namespace CollapseLauncher
 
                 // Check Metadata Update in Background
                 await CheckMetadataUpdateInBackground();
+
+#if !DEBUG
+                // Run the update check and trigger routine
+                LauncherUpdateHelper.RunUpdateCheckDetached();
+#else 
+                LogWriteLine("Running debug build, stopping update checks!", LogType.Error, false);
+#endif
             }
             catch (JsonException ex)
             {
@@ -482,7 +569,8 @@ namespace CollapseLauncher
             }
             catch (Exception ex)
             {
-                LogWriteLine($"Error while trying to get Notification Feed or Metadata Update\r\n{ex}", LogType.Error, true);
+                LogWriteLine($"Error while trying to run background tasks!\r\n{ex}", LogType.Error, true);
+                ErrorSender.SendException(ex);
             }
         }
         #endregion
@@ -512,8 +600,8 @@ namespace CollapseLauncher
         {
             try
             {
-                IsLoadNotifComplete = false;
                 NotificationData = new NotificationPush();
+                IsLoadNotifComplete = false;
                 CancellationTokenSource TokenSource = new CancellationTokenSource();
                 RunTimeoutCancel(TokenSource);
 
@@ -620,17 +708,17 @@ namespace CollapseLauncher
                 GameVersion? ValidForVerAbove = Entry.ValidForVerAbove != null ? new GameVersion(Entry.ValidForVerAbove) : null;
 
                 if (Entry.ValidForVerBelow == null && IsNotificationTimestampValid(Entry)
-                    || (LauncherUpdateWatcher.CompareVersion(AppCurrentVersion, ValidForVerBelow)
-                        && LauncherUpdateWatcher.CompareVersion(ValidForVerAbove, AppCurrentVersion))
-                    || LauncherUpdateWatcher.CompareVersion(AppCurrentVersion, ValidForVerBelow))
+                    || (LauncherUpdateHelper.LauncherCurrentVersion.Compare(ValidForVerBelow)
+                        && ValidForVerAbove.Compare(LauncherUpdateHelper.LauncherCurrentVersion))
+                    || LauncherUpdateHelper.LauncherCurrentVersion.Compare(ValidForVerBelow))
                 {
                     if (Entry.ActionProperty != null)
                     {
-                        Entry.OtherUIElement = Entry.ActionProperty.GetUIElement();
+                        Entry.OtherUIElement = Entry.ActionProperty.GetFrameworkElement();
                     }
 
                     SpawnNotificationPush(Entry.Title, Entry.Message, Entry.Severity, Entry.MsgId, Entry.IsClosable ?? true,
-                        Entry.IsDisposable ?? true, ClickCloseAction, (UIElement)Entry.OtherUIElement, true, Entry.Show, Entry.IsForceShowNotificationPanel);
+                        Entry.IsDisposable ?? true, ClickCloseAction, (FrameworkElement)Entry.OtherUIElement, true, Entry.Show, Entry.IsForceShowNotificationPanel);
                 }
                 await Task.Delay(250);
             }
@@ -641,10 +729,26 @@ namespace CollapseLauncher
             try
             {
                 string UpdateNotifFile = Path.Combine(AppDataFolder, "_NewVer");
+                string NeedInnoUpdateFile = Path.Combine(AppDataFolder, "_NeedInnoLogUpdate");
                 TypedEventHandler<InfoBar, object> ClickClose = new TypedEventHandler<InfoBar, object>((sender, args) =>
                 {
                     File.Delete(UpdateNotifFile);
                 });
+
+                // If the update was handled by squirrel and it needs Inno Setup Log file to get updated, then do the routine
+                if (File.Exists(NeedInnoUpdateFile))
+                {
+                    try
+                    {
+                        string InnoLogPath = Path.Combine(Path.GetDirectoryName(AppFolder), "unins000.dat");
+                        if (File.Exists(InnoLogPath)) InnoSetupLogUpdate.UpdateInnoSetupLog(InnoLogPath);
+                        File.Delete(NeedInnoUpdateFile);
+                    }
+                    catch (Exception ex)
+                    {
+                        LogWriteLine($"Something wrong while opening the \"unins000.dat\" or deleting the \"_NeedInnoLogUpdate\" file\r\n{ex}", LogType.Error, true);
+                    }
+                }
 
                 if (File.Exists(UpdateNotifFile))
                 {
@@ -700,7 +804,7 @@ namespace CollapseLauncher
         }
 
         private void SpawnNotificationPush(string Title, string Content, NotifSeverity Severity, int MsgId = 0, bool IsClosable = true,
-            bool Disposable = false, TypedEventHandler<InfoBar, object> CloseClickHandler = null, UIElement OtherContent = null, bool IsAppNotif = true,
+            bool Disposable = false, TypedEventHandler<InfoBar, object> CloseClickHandler = null, FrameworkElement OtherContent = null, bool IsAppNotif = true,
             bool? Show = false, bool ForceShowNotificationPanel = false)
         {
             if (!(Show ?? false)) return;
@@ -710,36 +814,27 @@ namespace CollapseLauncher
 
             NotificationData.CurrentShowMsgIds.Add(MsgId);
 
-            DispatcherQueue.TryEnqueue(() =>
+            DispatcherQueue?.TryEnqueue(() =>
             {
-                StackPanel OtherContentContainer = new StackPanel
-                {
-                    Orientation = Orientation.Vertical,
-                    Margin = new Thickness(0, -4, 0, 8)
-                };
+                StackPanel OtherContentContainer = UIElementExtensions.CreateStackPanel().WithMargin(0d, -4d, 0d, 8d);
 
                 InfoBar Notification = new InfoBar
                 {
                     Title = Title,
                     Message = Content,
-                    Margin = new Thickness(4, 4, 4, 0),
-                    CornerRadius = new CornerRadius(8),
                     Severity = NotifSeverity2InfoBarSeverity(Severity),
                     IsClosable = IsClosable,
                     IsIconVisible = true,
-                    Width = m_windowSupportCustomTitle ? 600 : double.NaN,
-                    HorizontalAlignment = m_windowSupportCustomTitle ? HorizontalAlignment.Right : HorizontalAlignment.Stretch,
                     Shadow = SharedShadow,
                     IsOpen = true
-                };
+                }
+                .WithMargin(4d, 4d, 4d, 0d).WithWidth(600)
+                .WithCornerRadius(8).WithHorizontalAlignment(HorizontalAlignment.Right);
 
                 Notification.Translation += Shadow32;
 
-                if (Severity == NotifSeverity.Informational)
-                    Notification.Background = (Brush)Application.Current.Resources["InfoBarAnnouncementBrush"];
-
                 if (OtherContent != null)
-                    OtherContentContainer.Children.Add(OtherContent);
+                    OtherContentContainer.AddElementToStackPanel(OtherContent);
 
                 if (Disposable)
                 {
@@ -750,7 +845,7 @@ namespace CollapseLauncher
                     };
                     NeverAskNotif.Checked += NeverAskNotif_Checked;
                     NeverAskNotif.Unchecked += NeverAskNotif_Unchecked;
-                    OtherContentContainer.Children.Add(NeverAskNotif);
+                    OtherContentContainer.AddElementToStackPanel(NeverAskNotif);
                 }
 
                 if (Disposable || OtherContent != null)
@@ -770,19 +865,21 @@ namespace CollapseLauncher
 
         private void SpawnNotificationoUI(int tagID, InfoBar Notification)
         {
-            Grid Container = new Grid() { Tag = tagID, };
+            Grid Container = UIElementExtensions.CreateGrid().WithTag(tagID);
             Notification.Loaded += (a, b) =>
             {
                 NoNotificationIndicator.Opacity = NotificationContainer.Children.Count > 0 ? 0f : 1f;
                 NewNotificationCountBadge.Visibility = Visibility.Visible;
                 NewNotificationCountBadge.Value++;
+
+                NotificationPanelClearAllGrid.Visibility = NotificationContainer.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             };
 
             Notification.Closed += (s, a) =>
             {
                 s.Translation -= Shadow32;
-                s.Height = 0;
-                s.Margin = new Thickness(0);
+                s.SetHeight(0d);
+                s.SetMargin(0d);
                 int msg = (int)s.Tag;
 
                 if (NotificationData.CurrentShowMsgIds.Contains(msg))
@@ -798,10 +895,11 @@ namespace CollapseLauncher
                 }
                 NoNotificationIndicator.Opacity = NotificationContainer.Children.Count > 0 ? 0f : 1f;
                 NewNotificationCountBadge.Visibility = NewNotificationCountBadge.Value > 0 ? Visibility.Visible : Visibility.Collapsed;
+                NotificationPanelClearAllGrid.Visibility = NotificationContainer.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             };
 
-            Container.Children.Add(Notification);
-            NotificationContainer.Children.Add(Container);
+            Container.AddElementToGridRowColumn(Notification);
+            NotificationContainer.AddElementToStackPanel(Container);
         }
 
         private void RemoveNotificationUI(int tagID)
@@ -811,11 +909,42 @@ namespace CollapseLauncher
             {
                 NotificationContainer.Children.Remove(notif);
                 InfoBar notifBar = notif.Children.OfType<InfoBar>()?.FirstOrDefault();
-                if (notifBar != null)
-                {
+                if (notifBar != null && notifBar.IsClosable)
                     notifBar.IsOpen = false;
-                }
             }
+        }
+
+        private async void ClearAllNotification(object sender, RoutedEventArgs args)
+        {
+            Button button = sender is Button ? sender as Button : null;
+            if (button != null) button.IsEnabled = false;
+
+            int stackIndex = 0;
+            for (; stackIndex < NotificationContainer.Children.Count;)
+            {
+                if (NotificationContainer.Children[stackIndex] is not Grid container
+                 || container.Children == null || container.Children.Count == 0
+                 || container.Children[0] is not InfoBar notifBar || notifBar == null
+                 || !notifBar.IsClosable)
+                {
+                    ++stackIndex;
+                    continue;
+                }
+
+                NotificationContainer.Children.RemoveAt(stackIndex);
+                notifBar.IsOpen = false;
+                await Task.Delay(100);
+            }
+
+            if (NotificationContainer.Children.Count == 0)
+            {
+                await Task.Delay(500);
+                ToggleNotificationPanelBtn.IsChecked = false;
+                IsNotificationPanelShow = false;
+                ShowHideNotificationPanel();
+            }
+
+            if (button != null) button.IsEnabled = true;
         }
 
         private void NeverAskNotif_Checked(object sender, RoutedEventArgs e)
@@ -840,45 +969,57 @@ namespace CollapseLauncher
             await Task.Delay(250);
             double currentVOffset = NotificationContainer.ActualHeight;
 
-            NotificationPanel.ScrollToVerticalOffset(currentVOffset);
+            NotificationPanelScrollViewer.ScrollToVerticalOffset(currentVOffset);
         }
         #endregion
 
         #region Game Selector Method
-        private PresetConfigV2 LoadSavedGameSelection()
+        private async ValueTask<(PresetConfig, string, string)> LoadSavedGameSelection()
         {
-            ComboBoxGameCategory.ItemsSource = ConfigV2GameCategory;
+            ComboBoxGameCategory.ItemsSource = BuildGameTitleListUI();
 
-            string GameCategory = GetAppConfigValue("GameCategory").ToString();
+            string gameName = GetAppConfigValue("GameCategory").ToString();
 
-            if (!GetConfigV2Regions(GameCategory))
-                GameCategory = ConfigV2GameCategory.FirstOrDefault();
+            #nullable enable
+            List<string>? gameCollection   = LauncherMetadataHelper.GetGameNameCollection()!;
+            List<string>? regionCollection = LauncherMetadataHelper.GetGameRegionCollection(gameName)!;
+            
+            if (regionCollection == null)
+                gameName = LauncherMetadataHelper.LauncherGameNameRegionCollection?.Keys.FirstOrDefault();
 
-            ComboBoxGameRegion.ItemsSource = BuildGameRegionListUI(GameCategory);
+            ComboBoxGameRegion.ItemsSource = BuildGameRegionListUI(gameName);
 
-            int IndexCategory = ConfigV2GameCategory.IndexOf(GameCategory);
-            if (IndexCategory < 0) IndexCategory = 0;
+            var indexCategory                    = gameCollection.IndexOf(gameName!);
+            if (indexCategory < 0) indexCategory = 0;
 
-            int IndexRegion = GetPreviousGameRegion(GameCategory);
+            var indexRegion = LauncherMetadataHelper.GetPreviousGameRegion(gameName);
 
-            ComboBoxGameCategory.SelectedIndex = IndexCategory;
-            ComboBoxGameRegion.SelectedIndex = IndexRegion;
-            CurrentGameCategory = ComboBoxGameCategory.SelectedIndex;
-            CurrentGameRegion = ComboBoxGameRegion.SelectedIndex;
-            return LoadCurrentConfigV2((string)ComboBoxGameCategory.SelectedValue, GetComboBoxGameRegionValue(ComboBoxGameRegion.SelectedValue));
-        }
+            ComboBoxGameCategory.SelectedIndex = indexCategory;
+            ComboBoxGameRegion.SelectedIndex   = indexRegion;
+            CurrentGameCategory                = ComboBoxGameCategory.SelectedIndex;
+            CurrentGameRegion                  = ComboBoxGameRegion.SelectedIndex;
 
-        private void SetGameCategoryChange(object sender, SelectionChangedEventArgs e)
-        {
-            string SelectedCategoryString = (string)((ComboBox)sender).SelectedItem;
-            GetConfigV2Regions(SelectedCategoryString);
+            string? gameNameLookup = GetComboBoxGameRegionValue(ComboBoxGameCategory.SelectedValue);
+            string? gameRegionLookup = GetComboBoxGameRegionValue(ComboBoxGameRegion.SelectedValue);
 
-            List<StackPanel> CurRegionList = BuildGameRegionListUI(SelectedCategoryString);
-            ComboBoxGameRegion.ItemsSource = CurRegionList;
-            ComboBoxGameRegion.SelectedIndex = GetIndexOfRegionStringOrDefault(SelectedCategoryString);
+            return (await LauncherMetadataHelper.GetMetadataConfig(gameNameLookup, gameRegionLookup),
+                                                                  gameNameLookup,
+                                                                  gameRegionLookup);
         }
         
-        private void EnableRegionChangeButton(object sender, SelectionChangedEventArgs e)
+        private void SetGameCategoryChange(object sender, SelectionChangedEventArgs e)
+        {
+            object? selectedItem = ((ComboBox)sender).SelectedItem;
+            if (selectedItem == null) return;
+            string? selectedCategoryString = GetComboBoxGameRegionValue(selectedItem);
+            // REMOVED: GetConfigV2Regions(SelectedCategoryString);
+            
+            ComboBoxGameRegion.ItemsSource   = BuildGameRegionListUI(selectedCategoryString);
+            ComboBoxGameRegion.SelectedIndex = GetIndexOfRegionStringOrDefault(selectedCategoryString);
+        }
+        #nullable disable
+
+        private async void EnableRegionChangeButton(object sender, SelectionChangedEventArgs e)
         {
             if (ComboBoxGameCategory.SelectedIndex == CurrentGameCategory && ComboBoxGameRegion.SelectedIndex == CurrentGameRegion)
             {
@@ -888,50 +1029,40 @@ namespace CollapseLauncher
             }
 
             object selValue = ((ComboBox)sender).SelectedValue;
-            if (selValue != null)
-            {
-                string category = (string)ComboBoxGameCategory.SelectedValue;
-                string region = GetComboBoxGameRegionValue(selValue);
-                PresetConfigV2 preset = ConfigV2.MetadataV2[category][region];
-                ChangeRegionWarningText.Text = preset.GameChannel != GameChannel.Stable ? string.Format(Lang._MainPage.RegionChangeWarnExper1, preset.GameChannel) : string.Empty;
-                ChangeRegionWarning.Visibility = preset.GameChannel != GameChannel.Stable ? Visibility.Visible : Visibility.Collapsed;
-            }
+            if (selValue == null) return;
+
+            string category = GetComboBoxGameRegionValue(ComboBoxGameCategory.SelectedValue);
+            string region = GetComboBoxGameRegionValue(selValue);
+            PresetConfig preset = await LauncherMetadataHelper.GetMetadataConfig(category, region);
+            
+            ChangeRegionWarningText.Text = preset!.Channel != GameChannel.Stable
+                ? string.Format(Lang._MainPage.RegionChangeWarnExper1, preset.Channel)
+                : string.Empty;
+            ChangeRegionWarning.Visibility =
+                preset.Channel != GameChannel.Stable ? Visibility.Visible : Visibility.Collapsed;
+            
             ChangeRegionConfirmBtn.IsEnabled          = !LockRegionChangeBtn;
             ChangeRegionConfirmBtnNoWarning.IsEnabled = !LockRegionChangeBtn;
+
+            if (!IsShowRegionChangeWarning && IsInstantRegionChange && !DisableInstantRegionChange && !IsFirstStartup)
+                ChangeRegionInstant();
         }
         #endregion
 
         #region Metadata Update Method
         private async Task CheckMetadataUpdateInBackground()
         {
-            bool IsUpdate = await CheckForNewConfigV2();
+            bool IsUpdate = await LauncherMetadataHelper.IsMetadataHasUpdate();
             if (IsUpdate)
             {
-                StackPanel Text = new StackPanel { Margin = new Thickness(8, 0, 8, 0), Orientation = Orientation.Horizontal };
-                Text.Children.Add(
-                    new FontIcon
-                    {
-                        Glyph = "",
-                        FontFamily = (FontFamily)Application.Current.Resources["FontAwesomeSolid"],
-                        FontSize = 16
-                    });
-
-                Text.Children.Add(
-                    new TextBlock
-                    {
-                        Text = Lang._AppNotification.NotifMetadataUpdateBtn,
-                        FontWeight = FontWeights.Medium,
-                        Margin = new Thickness(8, 0, 0, 0),
-                        VerticalAlignment = VerticalAlignment.Center
-                    });
-
-                Button UpdateMetadatabtn = new Button
-                {
-                    Content = Text,
-                    Margin = new Thickness(0, 0, 0, 16),
-                    Style = (Style)Application.Current.Resources["AccentButtonStyle"],
-                    CornerRadius = new CornerRadius(16)
-                };
+                Button UpdateMetadatabtn =
+                    UIElementExtensions.CreateButtonWithIcon<Button>(
+                            Lang._AppNotification!.NotifMetadataUpdateBtn,
+                            "",
+                            "FontAwesomeSolid",
+                            "AccentButtonStyle"
+                        )
+                    .WithMargin(0d, 0d, 0d, 16d);
 
                 UpdateMetadatabtn.Loaded += async (a, b) =>
                 {
@@ -939,20 +1070,15 @@ namespace CollapseLauncher
                     {
                         Text = Lang._AppNotification.NotifMetadataUpdateBtnUpdating,
                         FontWeight = FontWeights.Medium,
-                        VerticalAlignment = VerticalAlignment.Center
-                    };
+                    }.WithVerticalAlignment(VerticalAlignment.Center);
                     ProgressRing LoadBar = new ProgressRing
                     {
                         IsIndeterminate = true,
-                        VerticalAlignment = VerticalAlignment.Center,
-                        Margin = new Thickness(0, 0, 8, 0),
-                        Width = 16,
-                        Height = 16,
                         Visibility = Visibility.Collapsed
-                    };
-                    StackPanel StackPane = new StackPanel() { Orientation = Orientation.Horizontal };
-                    StackPane.Children.Add(LoadBar);
-                    StackPane.Children.Add(Text);
+                    }.WithWidthAndHeight(16d).WithMargin(0d, 0d, 8d, 0d).WithVerticalAlignment(VerticalAlignment.Center);
+                    StackPanel StackPane = UIElementExtensions.CreateStackPanel(Orientation.Horizontal);
+                    StackPane.AddElementToStackPanel(LoadBar);
+                    StackPane.AddElementToStackPanel(Text);
                     (a as Button).Content = StackPane;
                     (a as Button).IsEnabled = false;
 
@@ -970,8 +1096,7 @@ namespace CollapseLauncher
 
                     try
                     {
-                        await DownloadConfigV2Files(true, true);
-                        IsChangeDragArea = false;
+                        await LauncherMetadataHelper.RunMetadataUpdate();
                         MainFrameChanger.ChangeWindowFrame(typeof(MainPage));
                     }
                     catch (Exception ex)
@@ -1003,7 +1128,9 @@ namespace CollapseLauncher
             NavigationViewControl.IsSettingsVisible = true;
             NavigationViewControl.MenuItems.Clear();
 
-            FontFamily Fnt = Application.Current.Resources["FontAwesomeSolid"] as FontFamily;
+            IGameVersionCheck CurrentGameVersionCheck = GetCurrentGameProperty()._GameVersion;
+
+            FontFamily Fnt = FontCollections.FontAwesomeSolid;
 
             FontIcon IconLauncher = new FontIcon { FontFamily = Fnt, Glyph = "" };
             FontIcon IconRepair = new FontIcon { FontFamily = Fnt, Glyph = "" };
@@ -1011,39 +1138,59 @@ namespace CollapseLauncher
             FontIcon IconGameSettings = new FontIcon { FontFamily = Fnt, Glyph = "" };
             FontIcon IconAppSettings = new FontIcon { FontFamily = Fnt, Glyph = "" };
 
-            NavigationViewControl.MenuItems.Add(new NavigationViewItem()
-            { Content = Lang._HomePage.PageTitle, Icon = IconLauncher, Tag = "launcher" });
+            IconLauncher.ApplyDropShadow(Colors.Gray, 20);
+            IconRepair.ApplyDropShadow(Colors.Gray, 20);
+            IconCaches.ApplyDropShadow(Colors.Gray, 20);
+            IconGameSettings.ApplyDropShadow(Colors.Gray, 20);
+            IconAppSettings.ApplyDropShadow(Colors.Gray, 20);
 
-            if ((GetCurrentGameProperty()._GameVersion.GamePreset.IsCacheUpdateEnabled ?? false) || (GetCurrentGameProperty()._GameVersion.GamePreset.IsRepairEnabled ?? false))
+            if (NavigationViewControl.SettingsItem is not null && NavigationViewControl.SettingsItem is NavigationViewItem SettingsItem)
             {
-                NavigationViewControl.MenuItems.Add(new NavigationViewItemHeader() { Content = Lang._MainPage.NavigationUtilities });
+                SettingsItem.Content = Lang._SettingsPage.PageTitle;
+                SettingsItem.Icon = IconAppSettings;
+                ToolTipService.SetToolTip(SettingsItem, Lang._SettingsPage.PageTitle);
+            }
 
-                if (GetCurrentGameProperty()._GameVersion.GamePreset.IsRepairEnabled ?? false)
-                {
-                    NavigationViewControl.MenuItems.Add(new NavigationViewItem()
-                    { Content = Lang._GameRepairPage.PageTitle, Icon = IconRepair, Tag = "repair" });
-                }
-
-                if (GetCurrentGameProperty()._GameVersion.GamePreset.IsCacheUpdateEnabled ?? false)
+            if (m_appMode == AppMode.Hi3CacheUpdater)
+            {
+                if (CurrentGameVersionCheck.GamePreset.IsCacheUpdateEnabled ?? false)
                 {
                     NavigationViewControl.MenuItems.Add(new NavigationViewItem()
                     { Content = Lang._CachesPage.PageTitle, Icon = IconCaches, Tag = "caches" });
                 }
+                return;
             }
 
-            switch (GetCurrentGameProperty()._GameVersion.GameType)
+            NavigationViewControl.MenuItems.Add(new NavigationViewItem()
+            { Content = Lang._HomePage.PageTitle, Icon = IconLauncher, Tag = "launcher" });
+
+            NavigationViewControl.MenuItems.Add(new NavigationViewItemHeader() { Content = Lang._MainPage.NavigationUtilities });
+
+            if (CurrentGameVersionCheck.GamePreset.IsRepairEnabled ?? false)
             {
-                case GameType.Honkai:
+                NavigationViewControl.MenuItems.Add(new NavigationViewItem()
+                { Content = Lang._GameRepairPage.PageTitle, Icon = IconRepair, Tag = "repair" });
+            }
+
+            if (CurrentGameVersionCheck.GamePreset.IsCacheUpdateEnabled ?? false)
+            {
+                NavigationViewControl.MenuItems.Add(new NavigationViewItem()
+                { Content = Lang._CachesPage.PageTitle, Icon = IconCaches, Tag = "caches" });
+            }
+
+            switch (CurrentGameVersionCheck.GameType)
+            {
+                case GameNameType.Honkai:
                     NavigationViewControl.MenuItems.Add(new NavigationViewItem()
-                    { Content = Lang._GameSettingsPage.PageTitle, Icon = IconGameSettings, Tag = "gamesettings" });
+                    { Content = Lang._GameSettingsPage.PageTitle, Icon = IconGameSettings, Tag = "honkaigamesettings" });
                     break;
-                case GameType.StarRail:
+                case GameNameType.StarRail:
                     NavigationViewControl.MenuItems.Add(new NavigationViewItem()
                     { Content = Lang._StarRailGameSettingsPage.PageTitle, Icon = IconGameSettings, Tag = "starrailgamesettings" });
                     break;
             }
 
-            if (GetCurrentGameProperty()._GameVersion.GameType == GameType.Genshin)
+            if (CurrentGameVersionCheck.GameType == GameNameType.Genshin)
             {
                 NavigationViewControl.MenuItems.Add(new NavigationViewItem()
                 { Content = Lang._GenshinGameSettingsPage.PageTitle, Icon = IconGameSettings, Tag = "genshingamesettings" });
@@ -1052,8 +1199,6 @@ namespace CollapseLauncher
             if (ResetSelection)
             {
                 NavigationViewControl.SelectedItem = (NavigationViewItem)NavigationViewControl.MenuItems[0];
-                (NavigationViewControl.SettingsItem as NavigationViewItem).Content = Lang._SettingsPage.PageTitle;
-                (NavigationViewControl.SettingsItem as NavigationViewItem).Icon = IconAppSettings;
             }
         }
 
@@ -1067,6 +1212,48 @@ namespace CollapseLauncher
                     break;
                 }
             }
+
+            var paneRoot = (Grid)NavigationViewControl.FindDescendant("PaneRoot");
+            if (paneRoot != null)
+            {
+                paneRoot.PointerEntered += NavView_PanePointerEntered;
+                paneRoot.PointerExited  += NavView_PanePointerExited;
+            }
+
+            // The toggle button is not a part of pane. Why Microsoft!!!
+            var paneToggleButtonGrid = (Grid)NavigationViewControl.FindDescendant("PaneToggleButtonGrid");
+            if (paneToggleButtonGrid != null)
+            {
+                paneToggleButtonGrid.PointerEntered += NavView_PanePointerEntered;
+                paneToggleButtonGrid.PointerExited  += NavView_PanePointerEntered;
+            }
+
+            var backIcon = NavigationViewControl.FindDescendant("NavigationViewBackButton")?.FindDescendant<AnimatedIcon>();
+            backIcon?.ApplyDropShadow(Colors.Gray, 20);
+
+            var toggleIcon = NavigationViewControl.FindDescendant("TogglePaneButton")?.FindDescendant<AnimatedIcon>();
+            toggleIcon?.ApplyDropShadow(Colors.Gray, 20);
+        }
+
+        private async void NavView_PanePointerEntered(object sender, PointerRoutedEventArgs e)
+        {
+            if (!NavigationViewControl.IsPaneOpen)
+            {
+                var duration = TimeSpan.FromSeconds(0.25);
+                var current = (float)NavViewPaneBackground.Opacity;
+                var animation = NavViewPaneBackground.GetElementCompositor()!
+                                                     .CreateScalarKeyFrameAnimation("Opacity", 1, current);
+                await NavViewPaneBackground.StartAnimation(duration, animation);
+            }
+        }
+
+        private async void NavView_PanePointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            var duration = TimeSpan.FromSeconds(0.25);
+            var current = (float)NavViewPaneBackground.Opacity;
+            var animation = NavViewPaneBackground.GetElementCompositor()!
+                                                 .CreateScalarKeyFrameAnimation("Opacity", 0, current);
+            await NavViewPaneBackground.StartAnimation(duration, animation);
         }
 
         private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
@@ -1100,13 +1287,13 @@ namespace CollapseLauncher
 
                 case "caches":
                     if (GetCurrentGameProperty()._GameVersion.GamePreset.IsCacheUpdateEnabled ?? false)
-                        Navigate(IsGameInstalled() ? typeof(CachesPage) : typeof(NotInstalledPage), itemTag);
+                        Navigate(IsGameInstalled() || (m_appMode == AppMode.Hi3CacheUpdater && GetCurrentGameProperty()._GameVersion.GamePreset.GameType == GameNameType.Honkai) ? typeof(CachesPage) : typeof(NotInstalledPage), itemTag);
                     else
                         Navigate(typeof(UnavailablePage), itemTag);
                     break;
 
-                case "gamesettings":
-                    Navigate(IsGameInstalled() ? typeof(GameSettingsPage) : typeof(NotInstalledPage), itemTag);
+                case "honkaigamesettings":
+                    Navigate(IsGameInstalled() ? typeof(HonkaiGameSettingsPage) : typeof(NotInstalledPage), itemTag);
                     break;
 
                 case "starrailgamesettings":
@@ -1163,20 +1350,20 @@ namespace CollapseLauncher
                 NotificationLostFocusBackground.Opacity = 0.3;
                 NotificationPanel.Translation += Shadow48;
                 ToggleNotificationPanelBtn.Translation -= Shadow16;
-                (ToggleNotificationPanelBtn.Content as FontIcon).FontFamily = (FontFamily)Application.Current.Resources["FontAwesomeSolid"];
+                (ToggleNotificationPanelBtn.Content as FontIcon).FontFamily = FontCollections.FontAwesomeSolid;
             }
             else
             {
                 NotificationLostFocusBackground.Opacity = 0;
                 NotificationPanel.Translation -= Shadow48;
                 ToggleNotificationPanelBtn.Translation += Shadow16;
-                (ToggleNotificationPanelBtn.Content as FontIcon).FontFamily = (FontFamily)Application.Current.Resources["FontAwesome"];
+                (ToggleNotificationPanelBtn.Content as FontIcon).FontFamily = FontCollections.FontAwesomeRegular;
                 await Task.Delay(200);
                 NotificationLostFocusBackground.Visibility = Visibility.Collapsed;
             }
         }
 
-        private void NotificationContainerBackground_PointerPressed(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+        private void NotificationContainerBackground_PointerPressed(object sender, PointerRoutedEventArgs e)
         {
             IsNotificationPanelShow = false;
             ToggleNotificationPanelBtn.IsChecked = false;
@@ -1251,7 +1438,7 @@ namespace CollapseLauncher
             GridBG_IconImg.Opacity = 0.8d;
         }
 
-        private void GridBG_Icon_PointerEntered(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+        private void GridBG_Icon_PointerEntered(object sender, PointerRoutedEventArgs e)
         {
             if (!IsTitleIconForceShow)
             {
@@ -1262,7 +1449,7 @@ namespace CollapseLauncher
             }
         }
 
-        private void GridBG_Icon_PointerExited(object sender, Microsoft.UI.Xaml.Input.PointerRoutedEventArgs e)
+        private void GridBG_Icon_PointerExited(object sender, PointerRoutedEventArgs e)
         {
             if (!IsTitleIconForceShow)
             {
@@ -1296,6 +1483,7 @@ namespace CollapseLauncher
         #region Misc Methods
         private bool IsGameInstalled() => GameInstallationState == GameInstallStateEnum.Installed ||
                                           GameInstallationState == GameInstallStateEnum.InstalledHavePreload ||
+                                          GameInstallationState == GameInstallStateEnum.InstalledHavePlugin ||
                                           GameInstallationState == GameInstallStateEnum.NeedsUpdate;
 
         private void SpawnWebView2Panel(Uri URL)
@@ -1321,7 +1509,7 @@ namespace CollapseLauncher
 
         private int GetIndexOfRegionStringOrDefault(string category)
         {
-            int? index = GetPreviousGameRegion(category);
+            int? index = LauncherMetadataHelper.GetPreviousGameRegion(category);
 
             return index == -1 || index == null ? 0 : index ?? 0;
         }
@@ -1333,7 +1521,7 @@ namespace CollapseLauncher
             if (GetAppConfigValue("EnableShortcuts").ToBoolNullable() == null)
             {
                 SetAndSaveConfigValue("EnableShortcuts", true);
-                KeyList = null;
+                KbShortcutList = null;
 
                 SpawnNotificationPush(
                     Lang._AppNotification.NotifKbShortcutTitle,
@@ -1357,13 +1545,12 @@ namespace CollapseLauncher
         {
             try
             {
-                List<List<string>> keys = KeyList;
-
-                int keysIndex = 0;
+                if (KbShortcutList == null || KbShortcutList.Count == 0)
+                    LoadKbShortcuts();
 
                 int numIndex = 0;
-                VirtualKeyModifiers keyModifier = StrToVKeyModifier(keys[keysIndex][0]);
-                foreach (string game in ComboBoxGameCategory.Items)
+                VirtualKeyModifiers keyModifier = KbShortcutList["GameSelection"].Modifier;
+                for (; numIndex <= LauncherMetadataHelper.CurrentGameNameCount; numIndex++)
                 {
                     KeyboardAccelerator keystroke = new KeyboardAccelerator()
                     {
@@ -1375,15 +1562,15 @@ namespace CollapseLauncher
 
                     KeyboardAccelerator keystrokeNP = new KeyboardAccelerator()
                     {
-                        Key = VirtualKey.NumberPad1 + numIndex++,
+                        Key = VirtualKey.NumberPad1 + numIndex,
                     };
                     keystrokeNP.Invoked += KeyboardGameShortcut_Invoked;
                     KeyboardHandler.KeyboardAccelerators.Add(keystrokeNP);
                 }
 
                 numIndex = 0;
-                keyModifier = StrToVKeyModifier(keys[++keysIndex][0]);
-                while (numIndex < 6)
+                keyModifier = KbShortcutList["RegionSelection"].Modifier;
+                while (numIndex < LauncherMetadataHelper.CurrentGameRegionMaxCount)
                 {
                     KeyboardAccelerator keystroke = new KeyboardAccelerator()
                     {
@@ -1401,49 +1588,49 @@ namespace CollapseLauncher
                 keystrokeF5.Invoked += RefreshPage_Invoked;
                 KeyboardHandler.KeyboardAccelerators.Add(keystrokeF5);
 
-                List<KeybindAction> actions = new()
+                Dictionary<string, KeybindAction> actions = new()
                 {
                     // General
-                    ShowKeybinds_Invoked,
-                    GoHome_Invoked,
-                    GoSettings_Invoked,
-                    OpenNotify_Invoked,
+                    { "KbShortcutsMenu", ShowKeybinds_Invoked },
+                    { "HomePage", GoHome_Invoked },
+                    { "SettingsPage", GoSettings_Invoked },
+                    { "NotificationPanel", OpenNotify_Invoked },
 
                     // Game Related
-                    OpenScreenshot_Invoked,
-                    OpenGameFolder_Invoked,
-                    OpenGameCacheFolder_Invoked,
-                    ForceCloseGame_Invoked,
+                    { "ScreenshotFolder", OpenScreenshot_Invoked},
+                    { "GameFolder", OpenGameFolder_Invoked },
+                    { "CacheFolder", OpenGameCacheFolder_Invoked },
+                    { "ForceCloseGame", ForceCloseGame_Invoked },
 
-                    GoGameRepir_Invoked,
-                    GoGameSettings_Invoked,
-                    GoGameCaches_Invoked,
+                    { "RepairPage", GoGameRepir_Invoked },
+                    { "GameSettingsPage", GoGameSettings_Invoked },
+                    { "CachesPage", GoGameCaches_Invoked },
 
-                    RefreshPage_Invoked
+                    { "ReloadRegion", RefreshPage_Invoked }
                 };
 
-                foreach (KeybindAction func in actions)
+                foreach (var func in actions)
                 {
                     KeyboardAccelerator kbfunc = new KeyboardAccelerator()
                     {
-                        Modifiers = StrToVKeyModifier(keys[++keysIndex][0]),
-                        Key = StrToVKey(keys[keysIndex][1])
+                        Modifiers = KbShortcutList[func.Key].Modifier,
+                        Key = KbShortcutList[func.Key].Key
                     };
-                    kbfunc.Invoked += func;
+                    kbfunc.Invoked += func.Value;
                     KeyboardHandler.KeyboardAccelerators.Add(kbfunc);
                 }
             }
             catch (Exception error)
             {
                 LogWriteLine(error.ToString());
-                KeyList = null;
+                KbShortcutList = null;
                 CreateKeyboardShortcutHandlers();
             }
         }
 
         private void RefreshPage_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
-            if (IsKbShortcutCannotChange || !(IsLoadRegionComplete || IsExplicitCancel))
+            if (CannotUseKbShortcuts || !(IsLoadRegionComplete))
                 return;
 
             switch (PreviousTag)
@@ -1458,106 +1645,123 @@ namespace CollapseLauncher
                     string Tag = PreviousTag;
                     PreviousTag = "Empty";
                     NavigateInnerSwitch(Tag);
-                    LauncherFrame.BackStack.RemoveAt(LauncherFrame.BackStack.Count - 1);
-                    PreviousTagString.RemoveAt(PreviousTagString.Count - 1);
+                    if (LauncherFrame != null && LauncherFrame.BackStack != null && LauncherFrame.BackStack.Count > 0)
+                        LauncherFrame.BackStack.RemoveAt(LauncherFrame.BackStack.Count - 1);
+                    if (PreviousTagString != null && PreviousTagString.Count > 0)
+                        PreviousTagString.RemoveAt(PreviousTagString.Count - 1);
                     return;
             }
         }
 
         private void DeleteKeyboardShortcutHandlers() => KeyboardHandler.KeyboardAccelerators.Clear();
 
-        private async void ChangeTimer(int time = 500)
+        private async void DisableKbShortcuts(int time = 500)
         {
             try
             {
-                IsKbShortcutCannotChange = true;
+                CannotUseKbShortcuts = true;
                 await Task.Delay(time);
-                IsKbShortcutCannotChange = false;
+                CannotUseKbShortcuts = false;
             }
-            catch { }
+            catch
+            {
+                // Ignore warnings
+            }
         }
 
         private void RestoreCurrentRegion()
         {
-            string GameCategory = GetAppConfigValue("GameCategory").ToString();
+            var gameName = GetAppConfigValue("GameCategory").ToString();
+            #nullable enable
+            List<string>? gameNameCollection = LauncherMetadataHelper.GetGameNameCollection()!;
+            List<string>? gameRegionCollection = LauncherMetadataHelper.GetGameRegionCollection(gameName)!;
+            
+            gameName ??= gameRegionCollection.FirstOrDefault();
 
-            if (!GetConfigV2Regions(GameCategory))
-                GameCategory = ConfigV2GameCategory.FirstOrDefault();
+            var indexCategory                    = gameNameCollection.IndexOf(gameName!);
+            if (indexCategory < 0) indexCategory = 0;
 
-            int IndexCategory = ConfigV2GameCategory.IndexOf(GameCategory);
-            if (IndexCategory < 0) IndexCategory = 0;
+            var indexRegion = LauncherMetadataHelper.GetPreviousGameRegion(gameName);
 
-            int IndexRegion = GetPreviousGameRegion(GameCategory);
-
-            ComboBoxGameCategory.SelectedIndex = IndexCategory;
-            ComboBoxGameRegion.SelectedIndex = IndexRegion;
+            ComboBoxGameCategory.SelectedIndex = indexCategory;
+            ComboBoxGameRegion.SelectedIndex   = indexRegion;
         }
 
         private void KeyboardGameShortcut_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
             int index = (int)sender.Key; index -= index < 96 ? 49 : 97;
 
+            DisableInstantRegionChange = true;
             RestoreCurrentRegion();
-            if (IsKbShortcutCannotChange || !(IsLoadRegionComplete || IsExplicitCancel) || index >= ComboBoxGameCategory.Items.Count)
-                return;
-
-            if (ComboBoxGameCategory.SelectedValue != ComboBoxGameCategory.Items[index])
+            
+            if (CannotUseKbShortcuts || !(IsLoadRegionComplete)
+                                     || index >= ComboBoxGameCategory.Items.Count
+                                     || ComboBoxGameCategory.SelectedValue == ComboBoxGameCategory.Items[index]
+               )
             {
-                ComboBoxGameCategory.SelectedValue = ComboBoxGameCategory.Items[index];
-                ComboBoxGameRegion.SelectedIndex = GetIndexOfRegionStringOrDefault(ComboBoxGameCategory.SelectedValue.ToString());
-                ChangeRegionNoWarning(ChangeRegionConfirmBtn, null);
-                ChangeRegionConfirmBtn.IsEnabled = false;
-                ChangeRegionConfirmBtnNoWarning.IsEnabled = false;
-                IsKbShortcutCannotChange = true;
+                DisableInstantRegionChange = false;
+                return;
             }
+
+            ComboBoxGameCategory.SelectedValue = ComboBoxGameCategory.Items[index];
+            ComboBoxGameRegion.SelectedIndex = GetIndexOfRegionStringOrDefault(GetComboBoxGameRegionValue(ComboBoxGameCategory.SelectedValue));
+            ChangeRegionNoWarning(ChangeRegionConfirmBtn, null);
+            ChangeRegionConfirmBtn.IsEnabled          = false;
+            ChangeRegionConfirmBtnNoWarning.IsEnabled = false;
+            CannotUseKbShortcuts                      = true;
+            DisableInstantRegionChange                = false;
         }
 
         private void KeyboardGameRegionShortcut_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
             int index = (int)sender.Key; index -= index < 96 ? 49 : 97;
 
+            DisableInstantRegionChange = true;
             RestoreCurrentRegion();
-            if (IsKbShortcutCannotChange || !(IsLoadRegionComplete || IsExplicitCancel) || index >= ComboBoxGameRegion.Items.Count)
-                return;
             
-            if (ComboBoxGameRegion.SelectedValue != ComboBoxGameRegion.Items[index])
+
+            if (CannotUseKbShortcuts || !(IsLoadRegionComplete)
+                                     || index >= ComboBoxGameRegion.Items.Count 
+                                     || ComboBoxGameRegion.SelectedValue == ComboBoxGameRegion.Items[index])
             {
-                ComboBoxGameRegion.SelectedValue = ComboBoxGameRegion.Items[index];
-                ChangeRegionNoWarning(ChangeRegionConfirmBtn, null);
-                ChangeRegionConfirmBtn.IsEnabled = false;
-                ChangeRegionConfirmBtnNoWarning.IsEnabled = false;
-                IsKbShortcutCannotChange = true;
+                DisableInstantRegionChange = false;
+                return;
             }
+
+            ComboBoxGameRegion.SelectedValue = ComboBoxGameRegion.Items[index];
+            ChangeRegionNoWarning(ChangeRegionConfirmBtn, null);
+            ChangeRegionConfirmBtn.IsEnabled          = false;
+            ChangeRegionConfirmBtnNoWarning.IsEnabled = false;
+            CannotUseKbShortcuts                      = true;
+            DisableInstantRegionChange                = false;
         }
 
         private async void ShowKeybinds_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
-            await Dialogs.KeyboardShortcuts.Dialog_ShowKbShortcuts(this);
+            if (CannotUseKbShortcuts) return;
+
+            await Dialog_ShowKbShortcuts(this);
         }
 
         private void GoHome_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
-            if (!(IsLoadRegionComplete || IsExplicitCancel) || IsKbShortcutCannotChange)
-               return;
+            if (!(IsLoadRegionComplete) || CannotUseKbShortcuts) return;
 
-            if (NavigationViewControl.SelectedItem == NavigationViewControl.MenuItems[0]) 
-                return;
+            if (NavigationViewControl.SelectedItem == NavigationViewControl.MenuItems[0]) return;
 
-            ChangeTimer();
+            DisableKbShortcuts();
             NavigationViewControl.SelectedItem = NavigationViewControl.MenuItems[0];
             NavigateInnerSwitch("launcher");
-            
+
         }
 
         private void GoSettings_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
-            if (!(IsLoadRegionComplete || IsExplicitCancel) || IsKbShortcutCannotChange)
-                return;
+            if (!(IsLoadRegionComplete) || CannotUseKbShortcuts) return;
 
-            if (NavigationViewControl.SelectedItem == NavigationViewControl.SettingsItem) 
-                return;
+            if (NavigationViewControl.SelectedItem == NavigationViewControl.SettingsItem) return;
 
-            ChangeTimer();
+            DisableKbShortcuts();
             NavigationViewControl.SelectedItem = NavigationViewControl.SettingsItem;
             Navigate(typeof(SettingsPage), "settings");
         }
@@ -1575,7 +1779,7 @@ namespace CollapseLauncher
 
             string ScreenshotFolder = Path.Combine(NormalizePath(GameDirPath), CurrentGameProperty._GameVersion.GamePreset.GameType switch
             {
-                GameType.StarRail => $"{Path.GetFileNameWithoutExtension(CurrentGameProperty._GameVersion.GamePreset.GameExecutableName)}_Data\\ScreenShots",
+                GameNameType.StarRail => $"{Path.GetFileNameWithoutExtension(CurrentGameProperty._GameVersion.GamePreset.GameExecutableName)}_Data\\ScreenShots",
                 _ => "ScreenShot"
             });
 
@@ -1633,65 +1837,63 @@ namespace CollapseLauncher
         {
             if (!CurrentGameProperty.IsGameRunning) return;
 
-            PresetConfigV2 gamePreset = CurrentGameProperty._GameVersion.GamePreset;
+            PresetConfig gamePreset = CurrentGameProperty._GameVersion.GamePreset;
             try
             {
-                var gameProcess = Process.GetProcessesByName(gamePreset.GameExecutableName.Split('.')[0]);
+                var gameProcess = Process.GetProcessesByName(gamePreset.GameExecutableName!.Split('.')[0]);
                 foreach (var p in gameProcess)
                 {
                     LogWriteLine($"Trying to stop game process {gamePreset.GameExecutableName.Split('.')[0]} at PID {p.Id}", LogType.Scheme, true);
                     p.Kill();
                 }
             }
-            catch (System.ComponentModel.Win32Exception ex)
+            catch (Win32Exception ex)
             {
                 LogWriteLine($"There is a problem while trying to stop Game with Region: {gamePreset.ZoneName}\r\nTraceback: {ex}", LogType.Error, true);
             }
         }
         private void GoGameRepir_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
-            if (!(IsLoadRegionComplete || IsExplicitCancel) || IsKbShortcutCannotChange) 
-                return;
+            if (!(IsLoadRegionComplete) || CannotUseKbShortcuts) return;
 
-            if (NavigationViewControl.SelectedItem == NavigationViewControl.MenuItems[2]) 
-                return;
+            if (NavigationViewControl.SelectedItem == NavigationViewControl.MenuItems[2]) return;
 
-            ChangeTimer();
+            DisableKbShortcuts();
             NavigationViewControl.SelectedItem = NavigationViewControl.MenuItems[2];
             NavigateInnerSwitch("repair");
         }
 
         private void GoGameCaches_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
-            if (!(IsLoadRegionComplete || IsExplicitCancel) || IsKbShortcutCannotChange) 
+            if (!(IsLoadRegionComplete) || CannotUseKbShortcuts)
                 return;
-            if (NavigationViewControl.SelectedItem == NavigationViewControl.MenuItems[3]) 
+            if (NavigationViewControl.SelectedItem == NavigationViewControl.MenuItems[3])
                 return;
 
-            ChangeTimer();
+            DisableKbShortcuts();
             NavigationViewControl.SelectedItem = NavigationViewControl.MenuItems[3];
             NavigateInnerSwitch("caches");
         }
 
         private void GoGameSettings_Invoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
         {
-            if (!(IsLoadRegionComplete || IsExplicitCancel) || IsKbShortcutCannotChange)
+            if (!(IsLoadRegionComplete) || CannotUseKbShortcuts)
                 return;
 
-            if (NavigationViewControl.SelectedItem == NavigationViewControl.MenuItems.Last()) 
+            if (NavigationViewControl.SelectedItem == NavigationViewControl.MenuItems.Last())
                 return;
 
-            ChangeTimer();
+            DisableKbShortcuts();
             NavigationViewControl.SelectedItem = NavigationViewControl.MenuItems.Last();
             switch (CurrentGameProperty._GamePreset.GameType)
             {
-                case GameType.Honkai:
-                    Navigate(typeof(GameSettingsPage), "gamesettings");
+                case GameNameType.Honkai:
+                    Navigate(typeof(HonkaiGameSettingsPage), "honkaigamesettings");
                     break;
-                case GameType.Genshin:
+                case GameNameType.Genshin:
                     Navigate(typeof(GenshinGameSettingsPage), "genshingamesettings");
                     break;
-                case GameType.StarRail:
+                case GameNameType.StarRail:
                     Navigate(typeof(StarRailGameSettingsPage), "starrailgamesettings");
                     break;
             }
@@ -1717,6 +1919,91 @@ namespace CollapseLauncher
                     DeleteKeyboardShortcutHandlers();
                     break;
             }
+        }
+        #endregion
+
+        #region AppActivation
+        private bool SetActivatedRegion()
+        {
+            var args = m_arguments.StartGame;
+            if (args == null) return true;
+
+            string oldGameCategory = GetAppConfigValue("GameCategory").ToString();
+
+            string gameName = args.Game;
+
+            #nullable enable
+            List<string>? gameNameCollection = LauncherMetadataHelper.GetGameNameCollection()!;
+            List<string>? gameRegionCollection = LauncherMetadataHelper.GetGameRegionCollection(gameName)!;
+            if (gameRegionCollection == null)
+            {
+                bool res = int.TryParse(args.Game, out int gameIndex);
+                if (!res || gameIndex < 0 || gameIndex >= gameNameCollection.Count) return true;
+
+                gameName = gameNameCollection[gameIndex];
+                gameRegionCollection = LauncherMetadataHelper.GetGameRegionCollection(gameName)!;
+            }
+            SetAndSaveConfigValue("GameCategory", gameName);
+            #nullable restore
+            
+            if (args.Region != null)
+            {
+                string gameRegion = args.Region;
+                if (!gameRegionCollection.Contains(gameRegion))
+                {
+                    bool res = int.TryParse(args.Region, out int regionIndex);
+                    if (!res || regionIndex < 0 || regionIndex >= gameRegionCollection.Count) return true;
+
+                    gameRegion = gameRegionCollection[regionIndex];
+                }
+
+                int oldGameRegionIndex = LauncherMetadataHelper.GetPreviousGameRegion(gameName);
+                string oldGameRegion = gameRegionCollection.ElementAt(oldGameRegionIndex);
+                if (oldGameRegion == null) return true;
+
+                LauncherMetadataHelper.SetPreviousGameRegion(gameName, gameRegion);
+                SetAndSaveConfigValue("GameRegion", gameRegion);
+
+                if (oldGameCategory == gameName && oldGameRegion == gameRegion) return true;
+            }
+
+            return false;
+        }
+
+        private async void ChangeToActivatedRegion()
+        {
+            if (!(IsLoadRegionComplete) || CannotUseKbShortcuts) return;
+
+            bool sameRegion = SetActivatedRegion();
+
+            DisableInstantRegionChange = true;
+            LockRegionChangeBtn        = true;
+            IsLoadRegionComplete       = false;
+
+            (PresetConfig preset, string gameName, string gameRegion) = await LoadSavedGameSelection();
+
+            ShowAsyncLoadingTimedOutPill();
+            if (await LoadRegionFromCurrentConfigV2(preset, gameName, gameRegion))
+            {
+#if !DISABLEDISCORD
+                if (GetAppConfigValue("EnableDiscordRPC").ToBool() && !sameRegion)
+                    AppDiscordPresence.SetupPresence();
+#endif
+                InvokeLoadingRegionPopup(false);
+                LauncherFrame.BackStack.Clear();
+                MainFrameChanger.ChangeMainFrame(m_appMode == AppMode.Hi3CacheUpdater? typeof(CachesPage) : typeof(HomePage));
+                LogWriteLine($"Region changed to {preset.ZoneFullname}", LogType.Scheme, true);
+            }
+
+            LockRegionChangeBtn        = false;
+            DisableInstantRegionChange = false;
+        }
+
+        public void OpenAppActivation()
+        {
+            if (m_arguments.StartGame == null) return;
+
+            DispatcherQueue?.TryEnqueue(ChangeToActivatedRegion);
         }
         #endregion
     }

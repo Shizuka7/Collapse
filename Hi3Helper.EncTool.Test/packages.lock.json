@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net8.0": {
+      "Google.Protobuf": {
+        "type": "Transitive",
+        "resolved": "3.26.1",
+        "contentHash": "CHZX8zXqhF/fdUtd+AYzew8T2HFkAoe5c7lbGxZY/qryAlQXckDvM5BfOJjXlMS7kyICqQTMszj4w1bX5uBJ/w=="
+      },
+      "System.IO.Hashing": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "ne1843evDugl0md7Fjzy6QjJrzsjh46ZKbhf8GwBXb5f/gw97J4bxMs0NQKifDuThh/f0bZ0e62NPl1jzTuRqA=="
+      },
+      "hi3helper.enctool": {
+        "type": "Project",
+        "dependencies": {
+          "Google.Protobuf": "[3.26.1, )",
+          "Hi3Helper.Http": "[1.0.0, )",
+          "System.IO.Hashing": "[8.0.0, )"
+        }
+      },
+      "hi3helper.http": {
+        "type": "Project"
+      }
+    }
+  }
+}
